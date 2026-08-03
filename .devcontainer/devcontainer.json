@@ -1,0 +1,41 @@
+{
+  "name": "nextstage",
+
+  // compose.yaml を参照する。ここに compose 定義を複製しないこと（憲章 原則 VI）
+  "dockerComposeFile": "../compose.yaml",
+  "service": "dev",
+
+  // web / api は apps/** の骨格が揃うまで compose の profiles: [app] で無効化している。
+  // 骨格が入った PR で ["dev", "web", "api", "db"] に変更する（docs/design.md §10）
+  "runServices": ["dev", "db"],
+
+  "workspaceFolder": "/workspaces/nextstage",
+
+  // web / api サービスが有効化されるまでは dev 内で
+  // npm run dev / flask run を起動する運用になるため転送しておく
+  "forwardPorts": [3000, 8000],
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteUser": "vscode",
+
+  // "features" は使わない。Dev Containers CLI が派生イメージを作る仕組みのため、
+  // docker compose で直接起動したときにツールが入っていない状態になる。
+  // ツールは .devcontainer/Dockerfile に明示する（docs/design.md §10）
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "files.eol": "\n",
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      }
+    }
+  }
+}

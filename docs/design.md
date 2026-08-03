@@ -9,14 +9,18 @@
 
 ## 1. 技術スタック
 
-| 領域 | 採用 |
-|---|---|
-| フロントエンド | Next.js (App Router) / TypeScript |
-| バックエンド | Flask / Python 3.12 |
-| DB | PostgreSQL（Render マネージド） |
-| コンテナ | Docker（マルチステージ: `dev` / `prod`） |
-| ホスティング | Render（Blueprint = `render.yaml` 管理） |
-| ローカル開発 | Docker Compose + devcontainer |
+| 領域 | 採用 | バージョン |
+|---|---|---|
+| フロントエンド | Next.js (App Router) / TypeScript | Node 22 LTS |
+| バックエンド | Flask | Python 3.12 |
+| DB | PostgreSQL（Render マネージド） | 17 |
+| コンテナ | Docker（マルチステージ: `dev` / `prod`） | – |
+| ホスティング | Render（Blueprint = `render.yaml` 管理） | – |
+| ローカル開発 | Docker Compose + devcontainer | – |
+
+言語・ツールのバージョンは `.devcontainer/Dockerfile` で固定する（憲章 原則 VI）。
+Next.js / Flask 自体のバージョンは lockfile で固定する（憲章 原則 V）ため、ここでは定めない。
+各担当が最初の PR で決定し、本表に追記する。
 
 ---
 
@@ -59,7 +63,8 @@ nextstage/
 │
 ├── .devcontainer/
 │   ├── devcontainer.json        # compose.yaml を参照。service: dev
-│   └── Dockerfile               # Node + Python 3.12 + psql + pwsh
+│   ├── Dockerfile               # Node 22 + Python 3.12 + pwsh + psql 17
+│   └── post-create.sh           # safe.directory と SPECIFY_FEATURE_DIRECTORY の設定
 │
 ├── .specify/                    # Spec Kit（共有資産）
 │   └── memory/constitution.md   # 憲章
@@ -250,8 +255,27 @@ HttpOnly Cookie は Client Component から読めない。したがって:
 | `PORT` | api | – | **`8000` を明示**（`API_INTERNAL_URL` と一致させる） | – |
 | `FLASK_ENV` | api | `development` | `production` | – |
 | `SECRET_KEY` | api | 任意のローカル値 | **`sync: false`**（手入力） | ✅ |
-| `DATABASE_URL` | api / dev | `postgresql://...@db:5432/nextstage` | `fromDatabase`（自動） | ✅ |
 | `SESSION_COOKIE_SECURE` | api | `false` | `true` | – |
+| `POSTGRES_USER` | db | `nextstage` | 使わない（Render が管理） | – |
+| `POSTGRES_PASSWORD` | db | 任意のローカル値 | 使わない（Render が管理） | ✅ |
+| `POSTGRES_DB` | db | `nextstage` | 使わない（Render が管理） | – |
+| `DATABASE_URL` | api / dev | **`.env` に置かない**（下記） | `fromDatabase`（自動） | ✅ |
+
+### `DATABASE_URL` はローカルでは `.env` に置かない
+
+`db` コンテナは `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` を要求する。
+これと `DATABASE_URL` の両方を `.env` に書くと同じ資格情報が 2 箇所に存在し、
+パスワード変更時に片方が古くなる。
+
+したがってローカルでは **`POSTGRES_*` を単一の源**とし、`DATABASE_URL` は
+`compose.yaml` が組み立てて `dev` と `api` に渡す。
+
+```
+DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+```
+
+本番では Render が `fromDatabase` で `DATABASE_URL` を注入するため、`POSTGRES_*` は使わない。
+`api` のコードは**どちらの環境でも `DATABASE_URL` だけを読む**（`POSTGRES_*` を直接参照しない）。
 
 - `dev` サービスは `api` と同じ `.env` を読む。開発用に別のキーを新設しない。
 - キーを追加するときの手順は `CONTRIBUTING.md` §3 にある。
@@ -262,24 +286,29 @@ HttpOnly Cookie は Client Component から読めない。したがって:
 
 `compose.yaml` は 4 サービスを定義する: `dev` / `web` / `api` / `db`。
 
-| サービス | 役割 |
-|---|---|
-| `dev` | devcontainer のアタッチ先。Node + Python 3.12 + psql + pwsh を持つ作業用コンテナ。`command: sleep infinity` |
-| `web` | `next dev`（ホットリロード） |
-| `api` | `flask run --debug`（ホットリロード） |
-| `db` | PostgreSQL |
+| サービス | 役割 | 既定で起動 |
+|---|---|---|
+| `dev` | devcontainer のアタッチ先。作業用コンテナ。`command: sleep infinity` | ✅ |
+| `db` | PostgreSQL 17 | ✅ |
+| `web` | `next dev`（ホットリロード） | `profiles: [app]` |
+| `api` | `flask run --debug`（ホットリロード） | `profiles: [app]` |
+
+`web` / `api` は `apps/**` の骨格（`package.json` / `requirements.txt`）が無いとビルドできない。
+これらは各担当の成果物（§13）なので、揃うまで `profiles: [app]` を付けて既定では起動しない。
+骨格が入った PR で `profiles` 行を削除し、`runServices` に追加して有効化する。
 
 `devcontainer.json` の設定:
 
 ```jsonc
 {
+  "name": "nextstage",
   "dockerComposeFile": "../compose.yaml",
   "service": "dev",
-  "runServices": ["dev", "web", "api", "db"],
+  "runServices": ["dev", "db"],
   "workspaceFolder": "/workspaces/nextstage",
-  "features": {
-    "ghcr.io/devcontainers/features/powershell:1": {}
-  }
+  "forwardPorts": [3000, 8000],
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteUser": "vscode"
 }
 ```
 
@@ -287,11 +316,45 @@ HttpOnly Cookie は Client Component から読めない。したがって:
   api 担当が同じ環境を使えない。両方の言語を持つ `dev` を唯一のアタッチ先とする。
 - アプリのプロセスは `web` / `api` コンテナ側で動かす。`dev` は編集・型生成・Alembic 実行・
   `psql`・git・Spec Kit コマンドの実行場所とする。
+  `web` / `api` が有効化されるまでの当面は `forwardPorts` により `dev` 内で
+  `npm run dev` / `flask run` を起動してもホストの 3000 / 8000 で見える。
 - `dev` は `db:5432` に到達できること（Alembic を `dev` から実行するため）。
-- **`pwsh` が必要。** Spec Kit は `.specify/scripts/powershell/*.ps1` のみを提供しており、
-  10 コマンドのうち 8 つがこれを実行する（`specify` と `constitution` 以外）。
 - **`dev` サービスを `render.yaml` に含めないこと。** 本番に存在しない。
 - `.devcontainer/Dockerfile` は開発専用。`apps/*/Dockerfile` を流用しない。
+
+### ツールは devcontainer feature ではなく Dockerfile に入れる
+
+**`devcontainer.json` の `features` は使わない。**
+
+`features` は Dev Containers CLI が「compose のサービスイメージ + features」の派生イメージを作り、
+サービス定義を差し替える仕組みである。したがって `docker compose up dev` で直接起動すると
+**features で入れたはずのツールが存在しないコンテナになる**。VS Code 経由と CLI 経由で
+中身が変わるため、`README.md` / `CONTRIBUTING.md` が案内する `docker compose` の手順と食い違う。
+
+`.devcontainer/Dockerfile` に明示的に積む。base は `mcr.microsoft.com/devcontainers/python`
+の 3.12 系（Debian bookworm 標準の Python は 3.11 なので base の選択が重要）。
+
+| ツール | 入手元 | 用途 |
+|---|---|---|
+| Python 3.12 | base image | api |
+| Node 22 LTS | NodeSource apt リポジトリ | web / 型生成 |
+| PowerShell 7（`pwsh`） | Microsoft apt リポジトリ | Spec Kit |
+| `postgresql-client-17` | PGDG apt リポジトリ | `psql` / `pg_dump` |
+
+- **`pwsh` が必要。** Spec Kit は `.specify/scripts/powershell/*.ps1` のみを提供しており、
+  10 コマンドのうち 8 つがこれを実行する（`specify` と `constitution` 以外）。
+- **`postgresql-client` は 17 を明示する。** bookworm 標準は 15 で、17 サーバに対して
+  `pg_dump` が `server version mismatch` で失敗する（`psql` の単純なクエリは通るため気づきにくい）。
+
+### `post-create.sh`
+
+`postCreateCommand` で以下を行う。
+
+- `git config --global --add safe.directory /workspaces/nextstage`
+  （マウント所有者の違いによる `dubious ownership` を回避）
+- `~/.bashrc` に `SPECIFY_FEATURE_DIRECTORY` の導出を仕込む。
+  規約は `CONTRIBUTING.md` §6。`PROMPT_COMMAND` に載せてブランチ切替に追従させる
+  （シェル起動時の一度きりでは `git switch` に追従しない）
 
 ---
 
@@ -328,7 +391,12 @@ HttpOnly Cookie は Client Component から読めない。したがって:
 | 項目 | 値 |
 |---|---|
 | `databases[].name` | `db` |
+| バージョン | 17（ローカルの `postgres:17` と一致させる） |
 | 接続 | `api` の `DATABASE_URL` に `fromDatabase` で注入 |
+
+Render で選択可能な PostgreSQL バージョンはダッシュボードで確認し、ローカルの
+`compose.yaml` の `postgres:` タグと一致させる。ずれた場合は `compose.yaml` 側を合わせる
+（本番に合わせるのが原則。ローカルだけ新しいと本番で動かない機能を使ってしまう）。
 
 ### 共通
 

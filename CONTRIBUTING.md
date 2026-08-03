@@ -11,11 +11,16 @@ Spec Kit（SDD）の利用は**任意**。§6 は使う人だけ読めばよい�
 
 開発は devcontainer 内で行う（憲章 原則 VI）。ホストで直接 `npm install` / `pip install` はしない。
 
-1. VS Code でリポジトリを開き、"Reopen in Container" を選ぶ
-2. `dev` / `web` / `api` / `db` の 4 コンテナが起動する
-3. `web` は `localhost:3000`、`api` はコンテナ内から `http://api:8000`
+手順は `README.md` にある。要点だけ:
 
-`.env` は `.env.example` をコピーして作る。`.env` はコミットしない。
+1. `cp .env.example .env` して `POSTGRES_PASSWORD` と `SECRET_KEY` を埋める
+   （飛ばすと `db` が起動に失敗する）
+2. VS Code で "Reopen in Container" を選ぶ
+3. `dev` と `db` が起動し、`dev` コンテナの中に入る
+
+`web` / `api` サービスは `apps/**` の骨格が揃うまで `compose.yaml` の `profiles: [app]` で
+無効にしてある。それまでは `dev` コンテナ内で `npm run dev` / `flask run` を起動すれば
+ホストの `localhost:3000` / `localhost:8000` から見える。有効化の手順は `compose.yaml` のコメント。
 
 ---
 
@@ -146,7 +151,9 @@ Spec Kit は「現在の feature」を `.specify/feature.json` に **1 つだけ
 これは `.gitignore` 対象。コミットすると他人の feature を指した状態が配布され、
 `/speckit-plan` が別人の spec を書き換える。
 
-`.gitignore` されているため `git switch` しても状態が追従しない。シェルプロファイルで導出する:
+`.gitignore` されているため `git switch` しても状態が追従しない。そのため
+**devcontainer 側で自動導出するようにしてある**（`.devcontainer/post-create.sh` が
+`~/.bashrc` に仕込む）。各自で設定する必要はない。
 
 ```
 branch = 現在のブランチ名
@@ -154,8 +161,14 @@ if branch が ^[0-9]{3,}- に一致する:  SPECIFY_FEATURE_DIRECTORY = "specs/<
 else:                                 SPECIFY_FEATURE_DIRECTORY を unset
 ```
 
-**無条件に設定しないこと。** `main` にいるとき値が `specs/main` になり、`/speckit-specify` は
-明示値をそのまま使うため `specs/main/spec.md` を生成してしまう。
+**無条件に設定してはいけない。** `main` にいるとき値が `specs/main` になり、`/speckit-specify` は
+明示値をそのまま使うため `specs/main/spec.md` を生成してしまう。この分岐を消さないこと。
+
+手動で別の feature を指したいときは、シェルでその場だけ上書きする:
+
+```powershell
+$env:SPECIFY_FEATURE_DIRECTORY = 'specs/003-user-profile'
+```
 
 clone 直後に `/speckit-plan` を実行すると feature 未設定エラーになる。これは正常。上記で設定する。
 
