@@ -1,0 +1,100 @@
+# ローカル開発構成。本番は render.yaml（自動同期しない。docs/design.md §12）
+#
+# 起動前に  cp .env.example .env  して値を埋めること。
+# .env が無いと POSTGRES_PASSWORD が空になり db が起動に失敗する。
+
+name: hackstage
+
+services:
+  # ── 作業用コンテナ（devcontainer のアタッチ先）───────────────
+  # 編集・型生成・Alembic 実行・psql・git・Spec Kit をここで実行する。
+  # 本番には存在しない。render.yaml に含めないこと。
+  dev:
+    build:
+      context: .devcontainer
+      dockerfile: Dockerfile
+    command: sleep infinity
+    volumes:
+      - .:/workspaces/hackstage:cached
+    working_dir: /workspaces/hackstage
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # POSTGRES_* を単一の源として組み立てる。
+      # .env に DATABASE_URL を置かない理由は docs/design.md §9
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    ports:
+      # web / api サービスが有効化されるまで dev 内で
+      # npm run dev / flask run を動かすため公開しておく
+      - "3000:3000"
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── DB ───────────────────────────────────────────────────
+  # バージョンは Render マネージド Postgres と一致させる（docs/design.md §11）
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      # $$ は compose の変数展開を避けてコンテナ内のシェルに渡すため
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ── アプリ（骨格が揃うまで無効）──────────────────────────
+  # profiles: [app] を付けているのは apps/** がまだ存在せずビルドできないため。
+  # package.json / requirements.txt は各担当の成果物（docs/design.md §13）。
+  #
+  # 骨格が入った PR で:
+  #   1. 該当サービスの profiles 行を削除する
+  #   2. .devcontainer/devcontainer.json の runServices に追加する
+  #   3. dev サービスの ports から該当ポートを外す（衝突するため）
+  web:
+    profiles: [app]
+    build:
+      context: ./apps/web
+      target: dev
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./apps/web:/app:cached
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+  api:
+    profiles: [app]
+    build:
+      context: ./apps/api
+      target: dev
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    volumes:
+      - ./apps/api:/app:cached
+    expose:
+      # ports で公開しない。ブラウザから直接叩けないようにして
+      # 本番の Private Service と同じ性質をローカルでも保つ（憲章 原則 II）
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

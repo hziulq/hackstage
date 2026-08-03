@@ -20,7 +20,7 @@ Sync Impact Report
 - Deferred TODOs: なし。README.md 作成時に本憲章と 2 文書へのリンクを張ること。
 -->
 
-# nextstage Constitution
+# hackstage Constitution
 
 本憲章は**判断基準**を定める。レビューで変更を止める根拠はここにしかない。
 具体的な設計値と作業手順は別文書にあり、本憲章はそれらを重複して持たない。
