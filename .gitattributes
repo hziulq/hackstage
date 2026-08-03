@@ -1,0 +1,43 @@
+# 改行は LF に統一する。
+# Windows ホストで編集したファイルが CRLF になると、Linux の devcontainer 内で
+# シェルスクリプトが `bad interpreter: /bin/sh^M` で落ちる（憲章 原則 VI）
+* text=auto eol=lf
+
+# 明示（text=auto の自動判定に頼らない）
+*.sh    text eol=lf
+*.ps1   text eol=lf
+*.py    text eol=lf
+*.ts    text eol=lf
+*.tsx   text eol=lf
+*.js    text eol=lf
+*.jsx   text eol=lf
+*.json  text eol=lf
+*.jsonc text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.sql   text eol=lf
+*.toml  text eol=lf
+*.cfg   text eol=lf
+*.ini   text eol=lf
+Dockerfile      text eol=lf
+.dockerignore   text eol=lf
+.gitignore      text eol=lf
+.env.example    text eol=lf
+
+# バイナリ（改行変換も差分表示もしない）
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.pdf  binary
+
+# 生成物。PR の差分ノイズを抑えるため GitHub 上で折りたたむ
+# （マージは手動で行わず再生成する。憲章 原則 V）
+openapi.json      linguist-generated=true
+package-lock.json linguist-generated=true

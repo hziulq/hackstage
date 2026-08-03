@@ -1,0 +1,51 @@
+# ── 秘密値 ───────────────────────────────────────────
+# .env.example はコミットする（キー一覧の共有用）
+.env
+.env.*
+!.env.example
+
+# ── Node / Next.js（apps/web）─────────────────────────
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Python / Flask（apps/api）────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Spec Kit ─────────────────────────────────────────
+# 「現在の feature」を指すローカル状態。共有すると他人の spec を
+# 書き換える事故が起きる（CONTRIBUTING.md §6）
+.specify/feature.json
+
+# ── Claude Code ──────────────────────────────────────
+# .claude/skills/ 等は共有する。ローカル権限設定のみ除外
+.claude/settings.local.json
+
+# ── エディタ / OS ────────────────────────────────────
+# VS Code の共有設定は .devcontainer/devcontainer.json の
+# customizations.vscode に置く（docs/design.md §10）
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ── テスト・カバレッジ ───────────────────────────────
+coverage/
+htmlcov/
+.coverage
+
+# ── 注意 ─────────────────────────────────────────────
+# openapi.json は生成物だが**コミットする**（憲章 原則 V）
+# ここに追加しないこと
