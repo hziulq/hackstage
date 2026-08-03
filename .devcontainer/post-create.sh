@@ -2,7 +2,7 @@
 # devcontainer の作成時に一度だけ実行される（devcontainer.json の postCreateCommand）
 set -euo pipefail
 
-WORKSPACE=/workspaces/nextstage
+WORKSPACE=/workspaces/hackstage
 
 # ── git ───────────────────────────────────────────────
 # マウント元（ホスト）と実行ユーザーの所有者が異なるため、
@@ -16,14 +16,14 @@ git config --global --add safe.directory "$WORKSPACE"
 # /speckit-specify が明示値をそのまま使って specs/main/spec.md を作ってしまう。
 #
 # シェル起動時の一度きりでは git switch に追従しないため PROMPT_COMMAND に載せる。
-SNIPPET_MARKER='# >>> nextstage: specify feature dir >>>'
+SNIPPET_MARKER='# >>> hackstage: specify feature dir >>>'
 
 if ! grep -qF "$SNIPPET_MARKER" "$HOME/.bashrc" 2>/dev/null; then
   cat >> "$HOME/.bashrc" <<'BASHRC'
 
-# >>> nextstage: specify feature dir >>>
+# >>> hackstage: specify feature dir >>>
 # ブランチ名から SPECIFY_FEATURE_DIRECTORY を導出する（CONTRIBUTING.md §6）
-_nextstage_specify_feature() {
+_hackstage_specify_feature() {
   local branch
   branch=$(git branch --show-current 2>/dev/null) || branch=''
   if [[ "$branch" =~ ^[0-9]{3,}- ]]; then
@@ -32,8 +32,8 @@ _nextstage_specify_feature() {
     unset SPECIFY_FEATURE_DIRECTORY
   fi
 }
-PROMPT_COMMAND="_nextstage_specify_feature${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
-# <<< nextstage: specify feature dir <<<
+PROMPT_COMMAND="_hackstage_specify_feature${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
+# <<< hackstage: specify feature dir <<<
 BASHRC
   echo "[post-create] SPECIFY_FEATURE_DIRECTORY の導出を ~/.bashrc に追加しました"
 fi

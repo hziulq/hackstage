@@ -1,4 +1,4 @@
-# nextstage 設計値
+# hackstage 設計値
 
 実装中に**引く**ための文書。原則と禁止事項は `.specify/memory/constitution.md`（憲章）にある。
 本文書は憲章に従属する。矛盾する場合は憲章を正とし、本文書を修正する。
@@ -49,7 +49,7 @@ Next.js / Flask 自体のバージョンは lockfile で固定する（憲章 �
 Next.js と Flask で言語が異なるため、共有コードのディレクトリは作らない。型共有は `openapi.json` 経由。
 
 ```
-nextstage/
+hackstage/
 ├── README.md                    # 起動手順のみ（規約値を再掲しない）
 ├── CONTRIBUTING.md              # ブランチ運用・PR 手順
 ├── render.yaml                  # Render 構成（本番）
@@ -256,9 +256,9 @@ HttpOnly Cookie は Client Component から読めない。したがって:
 | `FLASK_ENV` | api | `development` | `production` | – |
 | `SECRET_KEY` | api | 任意のローカル値 | **`sync: false`**（手入力） | ✅ |
 | `SESSION_COOKIE_SECURE` | api | `false` | `true` | – |
-| `POSTGRES_USER` | db | `nextstage` | 使わない（Render が管理） | – |
+| `POSTGRES_USER` | db | `hackstage` | 使わない（Render が管理） | – |
 | `POSTGRES_PASSWORD` | db | 任意のローカル値 | 使わない（Render が管理） | ✅ |
-| `POSTGRES_DB` | db | `nextstage` | 使わない（Render が管理） | – |
+| `POSTGRES_DB` | db | `hackstage` | 使わない（Render が管理） | – |
 | `DATABASE_URL` | api / dev | **`.env` に置かない**（下記） | `fromDatabase`（自動） | ✅ |
 
 ### `DATABASE_URL` はローカルでは `.env` に置かない
@@ -301,11 +301,11 @@ DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTG
 
 ```jsonc
 {
-  "name": "nextstage",
+  "name": "hackstage",
   "dockerComposeFile": "../compose.yaml",
   "service": "dev",
   "runServices": ["dev", "db"],
-  "workspaceFolder": "/workspaces/nextstage",
+  "workspaceFolder": "/workspaces/hackstage",
   "forwardPorts": [3000, 8000],
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "remoteUser": "vscode"
@@ -350,7 +350,7 @@ DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTG
 
 `postCreateCommand` で以下を行う。
 
-- `git config --global --add safe.directory /workspaces/nextstage`
+- `git config --global --add safe.directory /workspaces/hackstage`
   （マウント所有者の違いによる `dubious ownership` を回避）
 - `~/.bashrc` に `SPECIFY_FEATURE_DIRECTORY` の導出を仕込む。
   規約は `CONTRIBUTING.md` §6。`PROMPT_COMMAND` に載せてブランチ切替に追従させる

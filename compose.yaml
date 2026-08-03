@@ -3,7 +3,7 @@
 # 起動前に  cp .env.example .env  して値を埋めること。
 # .env が無いと POSTGRES_PASSWORD が空になり db が起動に失敗する。
 
-name: nextstage
+name: hackstage
 
 services:
   # ── 作業用コンテナ（devcontainer のアタッチ先）───────────────
@@ -15,8 +15,8 @@ services:
       dockerfile: Dockerfile
     command: sleep infinity
     volumes:
-      - .:/workspaces/nextstage:cached
-    working_dir: /workspaces/nextstage
+      - .:/workspaces/hackstage:cached
+    working_dir: /workspaces/hackstage
     env_file:
       - path: .env
         required: false

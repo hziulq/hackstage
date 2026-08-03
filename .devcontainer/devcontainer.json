@@ -1,5 +1,5 @@
 {
-  "name": "nextstage",
+  "name": "hackstage",
 
   // compose.yaml を参照する。ここに compose 定義を複製しないこと（憲章 原則 VI）
   "dockerComposeFile": "../compose.yaml",
@@ -9,7 +9,7 @@
   // 骨格が入った PR で ["dev", "web", "api", "db"] に変更する（docs/design.md §10）
   "runServices": ["dev", "db"],
 
-  "workspaceFolder": "/workspaces/nextstage",
+  "workspaceFolder": "/workspaces/hackstage",
 
   // web / api サービスが有効化されるまでは dev 内で
   // npm run dev / flask run を起動する運用になるため転送しておく
