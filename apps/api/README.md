@@ -44,31 +44,46 @@ app/
 ## DB に接続する
 
 `DATABASE_URL` は `compose.yaml` が組み立てて、このコンテナに既に渡っている
-(`app/config.py` の `Config.DATABASE_URL` から読める)。db サービス自体は起動済みなので、
-繋ぐ処理を書けばそのまま使える。
+(`app/config.py` の `Config.DATABASE_URL` / `SQLALCHEMY_DATABASE_URI` から読める)。
+db サービス自体は起動済みなので、繋ぐ処理を書けばそのまま使える。
 
-このリポジトリはまだ ORM を選定・インストールしていない。`requirements.txt` に
-必要なライブラリを追加してから使う。
+ORM は Flask-SQLAlchemy を採用済み。モデルは `app/models/` にある
+(`app/models/__init__.py` で全モデルをインポートし、Alembic の autogenerate が
+検出できるようにしている)。
+
+## マイグレーション（Alembic / Flask-Migrate）
+
+マイグレーション本体はリポジトリルート直下の `migrations/`（このディレクトリではない）にある。
+理由と実行場所は `docs/design.md` §3、並行マイグレーションの運用は `CONTRIBUTING.md` §5 を参照。
+
+**`dev` コンテナから実行する。`api` コンテナには `apps/api` しかマウントされておらず、
+`migrations/` が見えないため。**
 
 ```bash
-# 例: SQLAlchemy を使う場合(ホスト側のターミナルで)
-echo "SQLAlchemy==2.0.35" >> requirements.txt
-echo "psycopg2-binary==2.9.9" >> requirements.txt
-docker compose build api
-docker compose up -d api
+# dev コンテナ内、apps/api で
+cd apps/api
+export FLASK_APP=wsgi.py
+
+# 全員が同じスキーマを再現する（新しく clone した場合・pull で新しいリビジョンが来た場合）
+flask db upgrade
+
+# モデルを変更した後、新しいリビジョンを生成する
+flask db migrate -m "変更内容"
+flask db upgrade
+
+# 適用状況の確認
+flask db current
+flask db history
 ```
 
-```python
-# 接続確認の例(app/config.py の DATABASE_URL を使う)
-from sqlalchemy import create_engine, text
+- `flask db init` は実行済み（`migrations/` が存在する）。**再実行しないこと**（既存履歴を壊す）。
+- `dev` コンテナには `.devcontainer/post-create.sh` が `apps/api/requirements.txt` を
+  インストールするため、`flask` コマンドはコンテナ作成時から使える。
+  `requirements.txt` を変更した場合は `pip install --user -r apps/api/requirements.txt` を
+  `dev` コンテナ内で再実行する（`api` コンテナ用の再ビルドとは別。上の「起動」節を参照）。
+- Autogenerate は ENUM 型の列の変更を完全には検出できないことがある。生成後は必ず差分を目で確認する。
 
-engine = create_engine(Config.DATABASE_URL)
-with engine.connect() as conn:
-    conn.execute(text("select 1"))
-```
+## 認証について
 
-## マイグレーション・認証について
-
-Alembic(マイグレーション)・Flask-Login(認証)はまだ入れていない。必要になった時点で
-`requirements.txt` に追加し、`docs/design.md` §7・§8 の契約(エンドポイント・Cookie属性)に
-沿って実装する。
+Flask-Login はまだ入れていない。必要になった時点で `requirements.txt` に追加し、
+`docs/design.md` §8 の契約(エンドポイント・Cookie属性)に沿って実装する。
