@@ -1,3 +1,5 @@
+# kimuch-source さんの schemas/dragon.py (56c9cac) と同じ書き方(marshmallow)で
+# フィールドを Dragon → Todo に置き換えたもの。
 from marshmallow import Schema, fields, validate
 
 

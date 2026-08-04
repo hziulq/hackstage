@@ -5,6 +5,9 @@ from datetime import timedelta
 class Config:
     SECRET_KEY = os.environ["SECRET_KEY"]
 
+    # feature/dragon-db-test にあった SQLite フォールバックと DevelopmentConfig/
+    # ProductionConfig の分岐は採用していない。DATABASE_URL(Postgres)を唯一の
+    # 接続元にする(docs/design.md §9。ローカル用の値を別経路で持つと二重管理になる)。
     DATABASE_URL = os.environ.get("DATABASE_URL")
     SQLALCHEMY_DATABASE_URI = DATABASE_URL
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}

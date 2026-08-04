@@ -1,3 +1,8 @@
+# kimuch-source さんの routes/dragon.py (56c9cac) をTodoモデル用に移植したもの。
+# CRUDの構成・marshmallowでのバリデーションはそのまま。変えたのは主に2点:
+#   1. Dragonには所有者がいなかったが、Todoは user_id を持つため、
+#      get_or_404(id) だけでなく user_id もクエリ条件に含めている(下記参照)
+#   2. エラー時のJSONの形を {"error": {"code", "message", ...}} に統一(docs/design.md §7)
 from flask import Blueprint, jsonify, request
 from marshmallow import ValidationError
 

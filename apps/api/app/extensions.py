@@ -5,6 +5,9 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+# feature/dragon-db-test にあった login_manager はここでは持たない。
+# 認証(Flask-Login)は 003-user-auth 側で別途追加する予定。
+
 # migrations/ はリポジトリルート直下に置く(docs/design.md §3)。
 # api コンテナには apps/api しかマウントされていないため、
 # flask db コマンドは dev コンテナから実行する(CONTRIBUTING.md §5)。
