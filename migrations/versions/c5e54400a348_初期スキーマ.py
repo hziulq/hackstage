@@ -7,6 +7,7 @@ Create Date: 2026-08-04 13:01:19.614465
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -51,10 +52,9 @@ def upgrade():
     op.create_table('goals',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('title', sa.String(length=200), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('company_name', sa.String(length=200), nullable=False),
+    sa.Column('stage', sa.String(length=50), nullable=False),
     sa.Column('target_date', sa.Date(), nullable=False),
-    sa.Column('status', sa.Enum('not_started', 'in_progress', 'achieved', name='goal_status'), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
@@ -73,13 +73,16 @@ def upgrade():
     op.create_table('posts',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('category', sa.Enum('anonymous_qa', 'prefecture_intern_info', name='post_category'), nullable=False),
+    sa.Column('category', sa.Enum('anonymous_qa', 'prefecture_intern_info', 'timeline', name='post_category'), nullable=False),
+    sa.Column('calendar_id', sa.Integer(), nullable=True),
     sa.Column('prefecture_id', sa.Integer(), nullable=True),
-    sa.Column('title', sa.String(length=200), nullable=False),
+    sa.Column('title', sa.String(length=200), nullable=True),
     sa.Column('body', sa.Text(), nullable=False),
     sa.Column('company_name', sa.String(length=200), nullable=True),
+    sa.Column('tags', postgresql.ARRAY(sa.String(length=30)), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+    sa.ForeignKeyConstraint(['calendar_id'], ['calendars.id'], ),
     sa.ForeignKeyConstraint(['prefecture_id'], ['prefectures.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -89,6 +92,7 @@ def upgrade():
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('target_type', sa.Enum('event', 'post', name='reaction_target_type'), nullable=False),
     sa.Column('target_id', sa.Integer(), nullable=False),
+    sa.Column('kind', sa.Enum('fire', 'thumbs_up', 'muscle', 'party', name='reaction_kind'), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id'),
@@ -154,8 +158,8 @@ def upgrade():
     sa.Column('goal_id', sa.Integer(), nullable=False),
     sa.Column('title', sa.String(length=200), nullable=False),
     sa.Column('due_date', sa.Date(), nullable=False),
-    sa.Column('order_index', sa.Integer(), nullable=False),
-    sa.Column('status', sa.Enum('todo', 'doing', 'done', name='goal_milestone_status'), nullable=False),
+    sa.Column('offset_days', sa.Integer(), nullable=False),
+    sa.Column('done', sa.Boolean(), nullable=False),
     sa.Column('event_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
@@ -186,13 +190,12 @@ def downgrade():
     # 削除しないままだと次の upgrade が `type "..." already exists` で失敗する。
     bind = op.get_bind()
     for enum_name in (
-        'goal_milestone_status',
         'event_category',
         'post_category',
         'reaction_target_type',
+        'reaction_kind',
         'calendar_member_role',
         'point_source_type',
-        'goal_status',
         'calendar_type',
     ):
         sa.Enum(name=enum_name).drop(bind, checkfirst=True)

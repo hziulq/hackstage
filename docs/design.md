@@ -198,6 +198,56 @@ const res = await fetch(`${process.env.API_INTERNAL_URL}/api/me`, {
 | GET | `/api/me` | 現在のユーザー情報。未ログインは 401 |
 | GET | `/api/health` | ヘルスチェック（認証不要） |
 
+### 画面別エンドポイント（検討中）
+
+フロント 4 画面（`002-web-four-screens` ブランチ、board / goals / timeline / mypage）の実装から
+必要な API を画面ごとに洗い出したもの。所有者確認はクエリ条件に含める（`todos.py` と同じパターン）。
+
+**Board（掲示板・匿名Q&A）** → `Post`（`category=anonymous_qa`） / `PostComment`
+
+| メソッド | パス | 用途 |
+|---|---|---|
+| GET | `/api/posts?category=anonymous_qa&tag=...` | 一覧 |
+| POST | `/api/posts` | 新規質問 |
+| POST | `/api/posts/<post_id>/comments` | 回答追加 |
+
+**Goals（目標＆逆算ToDo）** → `Goal` / `GoalMilestone`
+
+| メソッド | パス | 用途 |
+|---|---|---|
+| GET | `/api/goals?user_id=...` | 一覧 |
+| POST | `/api/goals` | 新規作成（マイルストーン自動生成込み） |
+| PATCH | `/api/goals/<goal_id>/milestones/<milestone_id>` | 完了トグル |
+| DELETE | `/api/goals/<goal_id>` | 削除 |
+
+**Timeline（タイムライン/カレンダー）** → `Event` / `Post` / `Reaction`
+
+| メソッド | パス | 用途 |
+|---|---|---|
+| GET | `/api/events?calendar_id=...` | 予定一覧 |
+| GET | `/api/posts?category=...&scope=group\|personal` | 投稿一覧 |
+| POST | `/api/posts` | 投稿作成 |
+| POST | `/api/reactions` | リアクション追加 |
+| DELETE | `/api/reactions/<id>` | リアクション削除 |
+
+**Mypage（マイページ/グループ管理）** → `Calendar` / `CalendarMember` / `PointEvent` / `Post`（`category=prefecture_intern_info`）
+
+| メソッド | パス | 用途 |
+|---|---|---|
+| GET | `/api/calendars/<id>` | グループ名・招待コード |
+| GET | `/api/calendars/<id>/members?sort=score` | ランキング（`point_events` 集計） |
+| GET | `/api/posts?category=prefecture_intern_info&prefecture_id=...` | 地域別インターン情報 |
+
+上記に合わせて、以下のとおりモデルのスキーマを変更した（初期マイグレーション `c5e54400a348` を書き換え。まだ未デプロイのため1リビジョンにまとめている）。
+
+1. **タグ機能** → `Post.tags`（Postgres `ARRAY(String)`）を追加。件数の規模から正規化テーブルは見送った
+2. **`Post.category` に timeline 用の値が無い** → `"timeline"` を追加。group/personal の区別は `Post.calendar_id`（nullable, `Event` と同じパターン）が参照する `Calendar.type` から判定する。timeline 投稿にはタイトルが無いため `Post.title` は nullable 化した
+3. **`Reaction` に種類が無い** → `kind`（`fire` / `thumbs_up` / `muscle` / `party`）列を追加。既存の `UniqueConstraint(user_id, target_type, target_id)` は「1人1投稿1リアクション」のままで変更不要
+4. **`Goal` のフィールド不一致** → `title`/`description`/`status` を廃止し、`company_name` / `stage` に統一。`stage` は選考ステージのUI文言が変わりやすいため DB enum ではなく `String(50)`（API 層で validate）にした
+5. **`GoalMilestone` の表現差** → `order_index`/`status` を廃止し、`offset_days`（並び順もこれで決まる）/ `done: Boolean` に統一
+
+> **未決事項**: ランキング用の集計エンドポイントの設計（`point_events` の集計方法・期間・並び順）はスキーマとは別に未定。実装時に決める。
+
 ---
 
 ## 8. 認証・認可の実装詳細
