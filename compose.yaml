@@ -25,10 +25,9 @@ services:
       # .env に DATABASE_URL を置かない理由は docs/design.md §9
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     ports:
-      # web / api サービスが有効化されるまで dev 内で
-      # npm run dev / flask run を動かすため公開しておく
+      # web サービスが有効化されるまで dev 内で
+      # npm run dev を動かすため公開しておく
       - "3000:3000"
-      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -51,14 +50,14 @@ services:
       retries: 10
       start_period: 10s
 
-  # ── アプリ（骨格が揃うまで無効）──────────────────────────
-  # profiles: [app] を付けているのは apps/** がまだ存在せずビルドできないため。
-  # package.json / requirements.txt は各担当の成果物（docs/design.md §13）。
+  # ── web（骨格が揃うまで無効）──────────────────────────────
+  # profiles: [app] を付けているのは apps/web がまだ存在せずビルドできないため。
+  # package.json は担当の成果物（docs/design.md §13）。
   #
   # 骨格が入った PR で:
-  #   1. 該当サービスの profiles 行を削除する
+  #   1. profiles 行を削除する
   #   2. .devcontainer/devcontainer.json の runServices に追加する
-  #   3. dev サービスの ports から該当ポートを外す（衝突するため）
+  #   3. dev サービスの ports から "3000:3000" を外す（衝突するため）
   web:
     profiles: [app]
     build:
@@ -76,8 +75,8 @@ services:
     depends_on:
       - api
 
+  # ── api ──────────────────────────────────────────────────
   api:
-    profiles: [app]
     build:
       context: ./apps/api
       target: dev
