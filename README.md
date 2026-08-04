@@ -31,7 +31,7 @@ cp .env.example .env
 
 VS Code でリポジトリを開き、コマンドパレットから **Dev Containers: Reopen in Container**。
 
-`dev` と `db` が起動し、`dev` コンテナの中に入る。初回はイメージのビルドに数分かかる。
+`dev`・`db`・`api` が起動し、`dev` コンテナの中に入る。初回はイメージのビルドに数分かかる。
 
 ### 3. 動作確認
 
@@ -58,11 +58,11 @@ docker compose run --rm dev bash # 作業用コンテナに入る
 
 ## 現状
 
-`apps/web` / `apps/api` はまだ空。`compose.yaml` の `web` / `api` サービスは
-`profiles: [app]` を付けて既定では起動しないようにしてある。
+`apps/api` の骨格が入り、`api` サービスは devcontainer を開くと自動で起動する
+(詳細は `apps/api/README.md`)。
 
-各担当が骨格（`package.json` / `requirements.txt`）を置く PR で有効化する。
-手順は `compose.yaml` のコメントにある。
+`apps/web` はまだ空。`compose.yaml` の `web` サービスは `profiles: [app]` を付けて
+既定では起動しないようにしてある。フロントエンド担当が骨格（`package.json`）を置く PR で
+有効化する。手順は `compose.yaml` のコメントにある。
 
-それまでは `dev` コンテナ内で `npm run dev` / `flask run` を起動すれば、
-ホストの `localhost:3000` / `localhost:8000` から見える。
+それまでは `dev` コンテナ内で `npm run dev` を起動すれば、ホストの `localhost:3000` から見える。

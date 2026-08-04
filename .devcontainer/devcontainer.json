@@ -5,15 +5,15 @@
   "dockerComposeFile": "../compose.yaml",
   "service": "dev",
 
-  // web / api は apps/** の骨格が揃うまで compose の profiles: [app] で無効化している。
-  // 骨格が入った PR で ["dev", "web", "api", "db"] に変更する（docs/design.md §10）
-  "runServices": ["dev", "db"],
+  // web は apps/web の骨格が揃うまで compose の profiles: [app] で無効化している。
+  // 骨格が入った PR で ["dev", "db", "api", "web"] に変更する（docs/design.md §10）
+  "runServices": ["dev", "db", "api"],
 
   "workspaceFolder": "/workspaces/hackstage",
 
-  // web / api サービスが有効化されるまでは dev 内で
-  // npm run dev / flask run を起動する運用になるため転送しておく
-  "forwardPorts": [3000, 8000],
+  // api は憲章 原則II により host には公開しない（compose.yaml で expose のみ）。
+  // 3000 は web サービスが有効化されるまで dev 内で npm run dev を起動する運用のため転送しておく
+  "forwardPorts": [3000],
 
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "remoteUser": "vscode",
