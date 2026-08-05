@@ -77,16 +77,17 @@ hackstage/
 │   │   ├── Dockerfile           # target: dev / prod
 │   │   ├── .dockerignore
 │   │   ├── next.config.js       # rewrites 設定（§5）
-│   │   ├── middleware.ts        # 画面ガード
 │   │   ├── package.json
 │   │   ├── tsconfig.json
 │   │   └── src/
+│   │       ├── middleware.ts    # 画面ガード（src 配下に置く。src/ 外だと Next.js に認識されない）
 │   │       ├── app/
 │   │       │   ├── (public)/    # 未ログインで見せる画面（/login 等）
 │   │       │   └── (protected)/ # ログイン必須の画面
 │   │       ├── components/
 │   │       └── lib/
-│   │           └── api.ts       # api 呼び出しラッパ（Cookie 転送を集約。§6）
+│   │           ├── api.ts       # Client Component 用の呼び出しラッパ（§6）
+│   │           └── api.server.ts # Server Component/Action 用（Cookie 転送を集約。§6）
 │   │
 │   └── api/                     # ── バックエンド担当の作業範囲
 │       ├── Dockerfile           # target: dev / prod
