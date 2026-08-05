@@ -1,10 +1,9 @@
 import pytest
-from sqlalchemy.orm import scoped_session, sessionmaker
-
 from app import create_app
 from app.extensions import db as _db
 from app.extensions import limiter
 from app.models.user import User
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 
 @pytest.fixture(scope="session")

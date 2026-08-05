@@ -25,8 +25,8 @@ description: "Task list template for feature implementation"
 
 **Purpose**: ruffの導入とローカル動作確認の土台
 
-- [ ] T001 [P] `apps/api/pyproject.toml`を新規作成し、`[tool.ruff]`で対象を`apps/api`配下に限定する(最小構成)
-- [ ] T002 devコンテナ内で`pip install --user ruff`し、`ruff check apps/api`が既存コードに対してエラー無く完了することを確認する(T001に依存)
+- [X] T001 [P] `apps/api/pyproject.toml`を新規作成し、`[tool.ruff]`で対象を`apps/api`配下に限定する(最小構成)
+- [X] T002 devコンテナ内で`pip install --user ruff`し、`ruff check apps/api`が既存コードに対してエラー無く完了することを確認する(T001に依存)
 
 ---
 
@@ -38,9 +38,9 @@ description: "Task list template for feature implementation"
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] `.github/workflows/api-ci.yml`を新規作成し、`pull_request`トリガーで`lint`ジョブ(`ruff check apps/api`)を実装する(T002に依存)
-- [ ] T004 [US1] `.github/workflows/api-ci.yml`に`test`ジョブを追加する。`services`で`postgres:17`を起動し、`DATABASE_URL`/`SECRET_KEY`をCI用のダミー値で設定した上で`apps/api`の依存をインストールし`python -m pytest`を実行する(T003に依存)
-- [ ] T005 [US1] ローカルで`quickstart.md`の「Lintジョブの再現」「テストジョブの再現」を実行し、CIワークフローと同じコマンドがdevコンテナ内で成功することを確認する(T004に依存)
+- [X] T003 [US1] `.github/workflows/api-ci.yml`を新規作成し、`pull_request`トリガーで`lint`ジョブ(`ruff check apps/api`)を実装する(T002に依存)
+- [X] T004 [US1] `.github/workflows/api-ci.yml`に`test`ジョブを追加する。`services`で`postgres:17`を起動し、`DATABASE_URL`/`SECRET_KEY`をCI用のダミー値で設定した上で`apps/api`の依存をインストールし`python -m pytest`を実行する(T003に依存)
+- [X] T005 [US1] ローカルで`quickstart.md`の「Lintジョブの再現」「テストジョブの再現」を実行し、CIワークフローと同じコマンドがdevコンテナ内で成功することを確認する(T004に依存)
 
 **Checkpoint**: Lint・テストの結果がPR上で確認できる状態になる
 
@@ -54,8 +54,8 @@ description: "Task list template for feature implementation"
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] `.github/workflows/api-ci.yml`に`openapi-check`ジョブを追加する。`python generate_openapi.py`を実行後、`git diff --exit-code openapi.json`のステップに`continue-on-error: true`を付与し、差分があっても⚠️表示のままジョブ・ワークフロー全体は成功させる(T004に依存)
-- [ ] T007 [US2] ローカルで`quickstart.md`の「openapi.json生成差分チェックジョブの再現」を実行し、差分が無いこと(終了コード0)を確認する(T006に依存)
+- [X] T006 [US2] `.github/workflows/api-ci.yml`に`openapi-check`ジョブを追加する。`python generate_openapi.py`を実行後、`git diff --exit-code openapi.json`のステップに`continue-on-error: true`を付与し、差分があっても⚠️表示のままジョブ・ワークフロー全体は成功させる(T004に依存)
+- [X] T007 [US2] ローカルで`quickstart.md`の「openapi.json生成差分チェックジョブの再現」を実行し、差分が無いこと(終了コード0)を確認する(T006に依存)
 
 **Checkpoint**: 3ジョブ(lint/test/openapi-check)すべてがCI上で動作する
 
@@ -65,7 +65,7 @@ description: "Task list template for feature implementation"
 
 **Purpose**: ドキュメント整合と最終確認
 
-- [ ] T008 CONTRIBUTING.mdの既存の「CI」節(§3、憲章改定時に追加済み)を確認し、ワークフローファイルのパス(`.github/workflows/api-ci.yml`)と食い違いがないか確認する。食い違いがあれば修正する
+- [X] T008 CONTRIBUTING.mdの既存の「CI」節(§3、憲章改定時に追加済み)を確認し、ワークフローファイルのパス(`.github/workflows/api-ci.yml`)と食い違いがないか確認する。食い違いがあれば修正する
 - [ ] T009 本featureのブランチをpushしてPRを作り、`quickstart.md`の「PRでの確認」手順を実行して3ジョブの表示・非ブロッキング動作を確認する(T005, T007に依存)
 
 ---

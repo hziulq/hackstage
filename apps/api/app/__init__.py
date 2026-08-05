@@ -28,7 +28,9 @@ def create_app():
     from .routes.auth import bp as auth_bp
     from .routes.health import bp as health_bp
     from .routes.hello import bp as hello_bp
-    from .routes.todos import bp as todos_bp  # feature/dragon-db-test の dragon_bp はTodoに移植して削除した
+    from .routes.todos import (
+        bp as todos_bp,  # feature/dragon-db-test の dragon_bp はTodoに移植して削除した
+    )
     app.register_blueprint(auth_bp)
     app.register_blueprint(health_bp)
     app.register_blueprint(hello_bp)
