@@ -11,6 +11,24 @@ bp = Blueprint("auth", __name__, url_prefix="/api")
 
 @bp.post("/register")
 def register():
+    """新規登録
+    ---
+    post:
+      summary: オープン登録(認証不要)。メール重複は400
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: RegisterSchema
+      responses:
+        201:
+          description: 登録成功
+          content:
+            application/json:
+              schema: UserSchema
+        400:
+          description: 入力エラー、またはメール重複
+    """
     try:
         data = register_schema.load(request.get_json(silent=True) or {})
     except ValidationError as err:
@@ -33,6 +51,26 @@ def register():
 @bp.post("/login")
 @limiter.limit("5 per minute")
 def login():
+    """ログイン
+    ---
+    post:
+      summary: 認証してセッションCookieを発行する(認証不要)。試行はレート制限あり
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: LoginSchema
+      responses:
+        200:
+          description: ログイン成功
+          content:
+            application/json:
+              schema: UserSchema
+        401:
+          description: メール不存在・パスワード誤りを区別しない一律のエラー
+        429:
+          description: レート制限超過
+    """
     try:
         data = login_schema.load(request.get_json(silent=True) or {})
     except ValidationError as err:
@@ -55,6 +93,18 @@ def login():
 @bp.post("/logout")
 @login_required
 def logout():
+    """ログアウト
+    ---
+    post:
+      summary: セッションを破棄する
+      security:
+        - cookieAuth: []
+      responses:
+        204:
+          description: ログアウト成功
+        401:
+          description: 未ログイン
+    """
     logout_user()
     return "", 204
 
@@ -62,4 +112,19 @@ def logout():
 @bp.get("/me")
 @login_required
 def me():
+    """自分の情報を取得
+    ---
+    get:
+      summary: 現在のユーザー情報を取得する
+      security:
+        - cookieAuth: []
+      responses:
+        200:
+          description: 正常
+          content:
+            application/json:
+              schema: UserSchema
+        401:
+          description: 未ログイン
+    """
     return jsonify(user_schema.dump(current_user))
