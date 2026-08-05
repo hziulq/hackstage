@@ -1,0 +1,31 @@
+name: web-ci
+
+# 憲章「CI」節(v3.1.0): 結果はPRに表示するが、必須ステータスチェックにはしない
+# (ブランチ保護で本ワークフローを「必須」に指定しないこと)。
+#
+# 008-render-deploy-prep: ローカル開発コンテナでは `next build` が
+# `Generating static pages` の段階で毎回 `TypeError: Cannot read properties
+# of null (reading 'useContext')` により失敗する現象を確認した(コンテナ固有か
+# Next.js 16系全体の問題かは切り分け中)。GitHub Actions(別環境)でも同じ失敗が
+# 起きるかを確認する目的も兼ねる。
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/web-ci.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+        working-directory: apps/web
+      - run: npm run build
+        working-directory: apps/web
