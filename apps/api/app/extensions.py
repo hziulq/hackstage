@@ -1,12 +1,14 @@
 import os
 
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
-
-# feature/dragon-db-test にあった login_manager はここでは持たない。
-# 認証(Flask-Login)は 003-user-auth 側で別途追加する予定。
+login_manager = LoginManager()
+limiter = Limiter(key_func=get_remote_address)
 
 # migrations/ はリポジトリルート直下に置く(docs/design.md §3)。
 # api コンテナには apps/api しかマウントされていないため、

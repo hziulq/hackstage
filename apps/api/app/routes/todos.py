@@ -4,6 +4,7 @@
 #      get_or_404(id) だけでなく user_id もクエリ条件に含めている(下記参照)
 #   2. エラー時のJSONの形を {"error": {"code", "message", ...}} に統一(docs/design.md §7)
 from flask import Blueprint, jsonify, request
+from flask_login import current_user, login_required
 from marshmallow import ValidationError
 
 from ..extensions import db
@@ -14,22 +15,17 @@ bp = Blueprint("todos", __name__, url_prefix="/api")
 
 
 @bp.get("/todos")
+@login_required
 def list_todos():
-    # 本来は current_user.id を使う(憲章 原則III)。Flask-Login 未導入のため
-    # 学習用の暫定実装としてクエリパラメータで受け取っている。
-    user_id = request.args.get("user_id", type=int)
-    if user_id is None:
-        return jsonify({"error": {"code": "invalid_request", "message": "user_id is required"}}), 400
-
-    todos = Todo.query.filter_by(user_id=user_id).order_by(Todo.id).all()
+    todos = Todo.query.filter_by(user_id=current_user.id).order_by(Todo.id).all()
     return jsonify(todos_schema.dump(todos))
 
 
 @bp.get("/todos/<int:todo_id>")
+@login_required
 def get_todo(todo_id):
-    user_id = request.args.get("user_id", type=int)
     # 所有者確認はクエリ条件に含める(憲章 原則III)。取得後に if で弾かない。
-    todo = Todo.query.filter_by(id=todo_id, user_id=user_id).first()
+    todo = Todo.query.filter_by(id=todo_id, user_id=current_user.id).first()
     if todo is None:
         return jsonify({"error": {"code": "not_found", "message": "not found"}}), 404
 
@@ -37,6 +33,7 @@ def get_todo(todo_id):
 
 
 @bp.post("/todos")
+@login_required
 def create_todo():
     try:
         data = todo_schema.load(request.get_json(silent=True) or {})
@@ -46,7 +43,7 @@ def create_todo():
             400,
         )
 
-    todo = Todo(user_id=data["user_id"], title=data["title"], due_date=data.get("due_date"))
+    todo = Todo(user_id=current_user.id, title=data["title"], due_date=data.get("due_date"))
     db.session.add(todo)
     db.session.commit()
 
@@ -54,9 +51,9 @@ def create_todo():
 
 
 @bp.put("/todos/<int:todo_id>")
+@login_required
 def update_todo(todo_id):
-    user_id = request.args.get("user_id", type=int)
-    todo = Todo.query.filter_by(id=todo_id, user_id=user_id).first()
+    todo = Todo.query.filter_by(id=todo_id, user_id=current_user.id).first()
     if todo is None:
         return jsonify({"error": {"code": "not_found", "message": "not found"}}), 404
 
@@ -78,9 +75,9 @@ def update_todo(todo_id):
 
 
 @bp.delete("/todos/<int:todo_id>")
+@login_required
 def delete_todo(todo_id):
-    user_id = request.args.get("user_id", type=int)
-    todo = Todo.query.filter_by(id=todo_id, user_id=user_id).first()
+    todo = Todo.query.filter_by(id=todo_id, user_id=current_user.id).first()
     if todo is None:
         return jsonify({"error": {"code": "not_found", "message": "not found"}}), 404
 

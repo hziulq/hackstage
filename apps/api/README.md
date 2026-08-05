@@ -85,5 +85,8 @@ flask db history
 
 ## 認証について
 
-Flask-Login はまだ入れていない。必要になった時点で `requirements.txt` に追加し、
-`docs/design.md` §8 の契約(エンドポイント・Cookie属性)に沿って実装する。
+Flask-Login を導入済み(`003-user-auth`)。`app/auth/security.py` でargon2によるパスワード
+ハッシュ化・検証を行い、`app/routes/auth.py` が `POST /api/register` / `POST /api/login` /
+`POST /api/logout` / `GET /api/me` を提供する。エンドポイント契約・Cookie属性は
+`docs/design.md` §7・§8を参照。保護対象のエンドポイントは `@login_required` を付与し、
+所有者確認は `current_user.id` をクエリ条件に含める(憲章 原則III、`app/routes/todos.py`が例)。
