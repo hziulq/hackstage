@@ -85,5 +85,23 @@ flask db history
 
 ## 認証について
 
-Flask-Login はまだ入れていない。必要になった時点で `requirements.txt` に追加し、
-`docs/design.md` §8 の契約(エンドポイント・Cookie属性)に沿って実装する。
+Flask-Login を導入済み(`003-user-auth`)。`app/auth/security.py` でargon2によるパスワード
+ハッシュ化・検証を行い、`app/routes/auth.py` が `POST /api/register` / `POST /api/login` /
+`POST /api/logout` / `GET /api/me` を提供する。エンドポイント契約・Cookie属性は
+`docs/design.md` §7・§8を参照。保護対象のエンドポイントは `@login_required` を付与し、
+所有者確認は `current_user.id` をクエリ条件に含める(憲章 原則III、`app/routes/todos.py`が例)。
+
+## テストの実行方法
+
+`005-api-tests`で整備。`dev` コンテナ内、`apps/api` ディレクトリで:
+
+```bash
+python -m pytest
+```
+
+- テストは`app.test_client()`経由でFlaskアプリを直接呼ぶ(`api`コンテナへの起動やcurlは不要)。
+- 各テストはSAVEPOINTベースのトランザクションで囲まれ、テスト後に必ずロールバックされるため、
+  既存の開発用DB(`db`サービス)のデータを汚染しない。
+- `Flask-Limiter`のインメモリストレージは各テスト前にリセットされる(テスト間でログイン試行回数が
+  引き継がれない)。
+- 実装の詳細は `specs/005-api-tests/` (spec.md / research.md / tasks.md) を参照。

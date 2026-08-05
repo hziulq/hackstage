@@ -193,6 +193,7 @@ const res = await fetch(`${process.env.API_INTERNAL_URL}/api/me`, {
 
 | メソッド | パス | 用途 |
 |---|---|---|
+| POST | `/api/register` | オープン登録。メール重複は 400 |
 | POST | `/api/login` | 認証してセッション Cookie を発行 |
 | POST | `/api/logout` | セッション破棄 |
 | GET | `/api/me` | 現在のユーザー情報。未ログインは 401 |
