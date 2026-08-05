@@ -5,7 +5,6 @@ services:
     rootDir: apps/web
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    dockerTarget: prod
     healthCheckPath: /healthz
     buildFilter:
       paths:
@@ -23,7 +22,6 @@ services:
     rootDir: apps/api
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    dockerTarget: prod
     buildFilter:
       paths:
         - apps/api/**

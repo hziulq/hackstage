@@ -420,7 +420,6 @@ DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTG
 | `rootDir` | `apps/web` |
 | `dockerfilePath` | `./Dockerfile` |
 | `dockerContext` | `.` |
-| `dockerTarget` | `prod` |
 | `healthCheckPath` | `/healthz`（Next.js 自身が返す。`/api/*` を使わない） |
 | `buildFilter.paths` | `apps/web/**`, `openapi.json` |
 
@@ -433,7 +432,6 @@ DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTG
 | `rootDir` | `apps/api` |
 | `dockerfilePath` | `./Dockerfile` |
 | `dockerContext` | `.` |
-| `dockerTarget` | `prod` |
 | `envVars` | `PORT: 8000` を明示、`SECRET_KEY` は `sync: false` |
 | `buildFilter.paths` | `apps/api/**` |
 
@@ -454,6 +452,13 @@ Render で選択可能な PostgreSQL バージョンはダッシュボードで�
 - `previews: generation: automatic`（PR ごとに web + api + db を一式複製）
 - `buildFilter` は**必須**。省略すると push ごとに全サービスが再ビルドされる
 - `render.yaml` に `dev` サービスを含めない
+- Render Blueprint にはマルチステージ Dockerfile のビルド対象ステージを指定する
+  フィールド（`dockerTarget` 等）が存在しない（指定すると `field dockerTarget
+  not found in type file.Service` で拒否される）。`--target` を指定しない
+  `docker build` は Dockerfile 中の**最後のステージ**をビルドするため、
+  `apps/web`・`apps/api` の Dockerfile は `prod` ステージを最後に置くことで
+  Render からはターゲット指定なしで正しく `prod` がビルドされる
+  （ステージの順序を変えないこと）
 
 ---
 
@@ -463,7 +468,7 @@ Render で選択可能な PostgreSQL バージョンはダッシュボードで�
 |---|---|---|
 | 構成定義 | `compose.yaml` | `render.yaml` |
 | 開発環境 | `.devcontainer/`（`dev` サービス） | 該当なし |
-| Dockerfile | 同一（`target: dev`） | 同一（`dockerTarget: prod`） |
+| Dockerfile | 同一（`--target dev`） | 同一（ターゲット未指定。最後のステージ`prod`が使われる） |
 | DB | compose の `db` コンテナ | Render マネージド Postgres |
 | 環境変数 | `.env` | ダッシュボード / `envVars` |
 | api への到達 | `http://api:8000` | `http://api:8000`（internal） |
