@@ -1,0 +1,68 @@
+name: api-ci
+
+# 憲章「CI」節(v3.1.0): 結果はPRに表示するが、必須ステータスチェックにはしない
+# (ブランチ保護で本ワークフローを「必須」に指定しないこと。007-ci-setup)。
+
+on:
+  pull_request:
+    paths:
+      - "apps/api/**"
+      - "openapi.json"
+      - ".github/workflows/api-ci.yml"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff==0.16.1
+      - run: ruff check apps/api
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:17
+        env:
+          POSTGRES_USER: hackstage
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: hackstage
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hackstage -d hackstage"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://hackstage:ci-only-password@localhost:5432/hackstage
+      SECRET_KEY: ci-only-secret
+      SESSION_COOKIE_SECURE: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r apps/api/requirements.txt
+      - run: python -m pytest
+        working-directory: apps/api
+
+  openapi-check:
+    runs-on: ubuntu-latest
+    env:
+      # generate_openapi.py は DB に接続しないため、SECRET_KEY のみダミー値で足りる。
+      SECRET_KEY: ci-only-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r apps/api/requirements.txt
+      - run: python generate_openapi.py
+        working-directory: apps/api
+      - name: openapi.jsonが実装と一致しているか確認(非ブロッキング)
+        continue-on-error: true
+        run: git diff --exit-code openapi.json

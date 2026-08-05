@@ -10,7 +10,6 @@ import os
 from apispec import APISpec
 from apispec.ext.marshmallow import MarshmallowPlugin
 from apispec_webframeworks.flask import FlaskPlugin
-
 from app import create_app
 from app.schemas.todo import TodoSchema
 from app.schemas.user import LoginSchema, RegisterSchema, UserSchema

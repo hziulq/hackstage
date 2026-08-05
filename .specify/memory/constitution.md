@@ -1,23 +1,14 @@
 <!--
 Sync Impact Report
-- Version change: 2.1.1 → 3.0.0
-- Bump rationale: MAJOR。(1) 原則 I を「単一ファイル」から「3 文書構成 + 重複禁止」へ再定義。
-  (2) 開発ワークフローの「Spec Kit のフローに従う MUST」を撤廃し、SDD を任意に変更（後方非互換）。
-  (3) 設計値と運用手順を別文書へ移設。
-- Modified principles:
-  - I. 憲章が単一の真実 → I. 規約は 1 箇所にのみ書く（再定義）
-  - II, III, IV: 規範文のみ残し、具体値（Cookie 属性表 / 認証方式の選定 / 呼び出し方の表）を
-    docs/design.md へ移設
-  - V, VI: 同様に規範文のみ残し、値を docs/design.md へ移設
-- Moved out (重複は作らない。移設のみ):
-  - → docs/design.md: 技術スタック / サービス構成 / ディレクトリ構成 / ポート / 通信経路 /
-    API の呼び出し方 / devcontainer 構成 / 環境変数 / Render 設定値 / ローカルと本番の対応 /
-    API 契約 / 認証・認可の詳細 / 担当分担と成果物
-  - → CONTRIBUTING.md: ブランチ運用 / PR 手順 / 共有ファイルの扱い / 並行マイグレーション /
-    .gitignore / Spec Kit の使い方
-- Added sections: 文書構成 / 改正履歴
-- Removed sections: なし（すべて移設）
-- Deferred TODOs: なし。README.md 作成時に本憲章と 2 文書へのリンクを張ること。
+- Version change: 3.0.0 → 3.1.0
+- Bump rationale: MINOR。未決事項「CI（Lint / テスト / 型生成の検証）」を解消し、
+  新規セクション「## CI」を追加（既定方針を「未整備」から「整備する MUST・
+  ただし非ブロッキング MUST」へ変更）。既存原則の削除・再定義は無い。
+- Modified principles: なし
+- Added sections: ## CI（Lint / テスト / 型生成の検証）
+- Removed sections: 未決事項表の CI 行（本文へ格上げのため削除）
+- Deferred TODOs: ワークフロー定義そのものは別 PR（`007-ci-setup`）で追加する。
+  本改定は方針決定のみ。
 -->
 
 # hackstage Constitution
@@ -165,7 +156,22 @@ Sync Impact Report
 | Render のプラン | 未定 | 負荷が判明した時点 |
 | 型生成の自動化 | 手動実行 | CI 整備時 |
 | feature 番号の採番方式 | 連番 + 事前宣言 | 番号衝突が頻発した場合 → タイムスタンプ採番 |
-| CI（Lint / テスト / 型生成の検証） | 未整備 | 手動レビューが追いつかなくなった時点 |
+
+## CI（Lint / テスト / 型生成の検証）
+
+2026-08-05 決定（v3.1.0）。`未決事項`から解消。
+
+- CI（GitHub Actions 等）を整備する MUST。PR に Lint / テスト / `openapi.json` 生成差分の
+  結果を表示する MUST。
+- CI の結果は**必須ステータスチェックにしない**（マージをブロックしない）MUST。
+  理由: メンバーの開発経験が浅く、CI に阻まれて push・マージできなくなる事態を避ける。
+  結果が赤くても手動でマージできる状態を維持する。
+- レビューゲートは変わらず「憲章への適合とセキュリティチェックリストのみ」（Governance 節）。
+  CI の結果はレビューを補助する参考情報であり、レビューの代替ではない。
+- 具体的なワークフロー定義・実行対象は `CONTRIBUTING.md` に記載する（本原則 I に従い、
+  ここに重複させない）。
+- 再検討の契機: チームの経験が積み重なり、必須ステータスチェック化（ブロッキング）の
+  要否を判断できる時点。
 
 ## Governance
 
@@ -212,5 +218,6 @@ Sync Impact Report
 | 2.1.0 | devcontainer への `pwsh` 同梱を必須化。Alembic 並行マイグレーション規約を追加 |
 | 2.1.1 | `SPECIFY_FEATURE_DIRECTORY` の固定規約を追加。ブランチ導出の不具合を修正 |
 | 3.0.0 | 3 文書構成へ分割。SDD を任意化 |
+| 3.1.0 | 未決事項「CI」を解消。非ブロッキング CI（必須ステータスチェックにしない）を MUST 化 |
 
-**Version**: 3.0.0 | **Ratified**: 2026-08-03 | **Last Amended**: 2026-08-03
+**Version**: 3.1.0 | **Ratified**: 2026-08-03 | **Last Amended**: 2026-08-05
