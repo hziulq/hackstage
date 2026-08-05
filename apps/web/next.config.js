@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
   async rewrites() {
     const apiInternalUrl = process.env.API_INTERNAL_URL;
     if (!apiInternalUrl) {
