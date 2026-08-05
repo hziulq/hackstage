@@ -24,8 +24,8 @@ description: "Task list template for feature implementation"
 
 **Purpose**: 依存ライブラリの追加と反映
 
-- [ ] T001 [P] `apps/api/requirements.txt`に`apispec`, `apispec-webframeworks`をバージョン固定で追加する(憲章 原則V)
-- [ ] T002 依存を反映する: devコンテナ内で`pip install --user -r apps/api/requirements.txt`(T001に依存)
+- [X] T001 [P] `apps/api/requirements.txt`に`apispec`, `apispec-webframeworks`をバージョン固定で追加する(憲章 原則V)
+- [X] T002 依存を反映する: devコンテナ内で`pip install --user -r apps/api/requirements.txt`(T001に依存)
 
 ---
 
@@ -35,9 +35,9 @@ description: "Task list template for feature implementation"
 
 **⚠️ CRITICAL**: このフェーズ完了までエンドポイントごとのdocstring追記を進めても生成できない
 
-- [ ] T003 `apps/api/generate_openapi.py`を新規作成する。`APISpec`(title, version, openapi_version="3.0.3", plugins=[FlaskPlugin(), MarshmallowPlugin()])を初期化し、`create_app()`のFlaskインスタンスを`app.test_request_context()`で使えるようにする(T002に依存)
-- [ ] T004 `generate_openapi.py`に、`RegisterSchema` / `LoginSchema` / `UserSchema` / `TodoSchema`を`spec.components.schema(...)`で登録する処理を追加する(T003に依存)
-- [ ] T005 `generate_openapi.py`に、リポジトリルート直下の`openapi.json`へ`json.dump(spec.to_dict(), ..., indent=2, ensure_ascii=False)`で書き出す処理を追加する(T004に依存)
+- [X] T003 `apps/api/generate_openapi.py`を新規作成する。`APISpec`(title, version, openapi_version="3.0.3", plugins=[FlaskPlugin(), MarshmallowPlugin()])を初期化し、`create_app()`のFlaskインスタンスを`app.test_request_context()`で使えるようにする(T002に依存)
+- [X] T004 `generate_openapi.py`に、`RegisterSchema` / `LoginSchema` / `UserSchema` / `TodoSchema`を`spec.components.schema(...)`で登録する処理を追加する(T003に依存)
+- [X] T005 `generate_openapi.py`に、リポジトリルート直下の`openapi.json`へ`json.dump(spec.to_dict(), ..., indent=2, ensure_ascii=False)`で書き出す処理を追加する(T004に依存)
 
 **Checkpoint**: ここまで完了すればView関数のdocstring追記を開始できる
 
@@ -51,12 +51,12 @@ description: "Task list template for feature implementation"
 
 ### Implementation for User Story 1
 
-- [ ] T006 [P] [US1] `apps/api/app/routes/health.py`の`health()`にOpenAPI用docstring(YAML)を追記する(FR-001, FR-005: 認証不要・200レスポンス)(T005に依存)
-- [ ] T007 [P] [US1] `apps/api/app/routes/hello.py`の`hello()`にOpenAPI用docstringを追記する(T005に依存)
-- [ ] T008 [P] [US1] `apps/api/app/routes/auth.py`の`register()`/`login()`/`logout()`/`me()`にOpenAPI用docstringを追記する(FR-002, FR-005: register/loginは`RegisterSchema`/`LoginSchema`を`$ref`、レスポンスは`UserSchema`。logout/meは`@login_required`のため401レスポンスも記載)(T005に依存)
-- [ ] T009 [P] [US1] `apps/api/app/routes/todos.py`の`list_todos()`/`get_todo()`/`create_todo()`/`update_todo()`/`delete_todo()`にOpenAPI用docstringを追記する(FR-002, FR-005: `TodoSchema`を`$ref`、404/401レスポンスも記載)(T005に依存)
-- [ ] T010 [US1] `generate_openapi.py`に、T006〜T009で対象にした全View関数を`spec.path(view=...)`で登録する処理を追加する(T006, T007, T008, T009に依存)
-- [ ] T011 [US1] `python generate_openapi.py`を実行し、リポジトリルート直下に`openapi.json`が生成されることを確認する(T010に依存)
+- [X] T006 [P] [US1] `apps/api/app/routes/health.py`の`health()`にOpenAPI用docstring(YAML)を追記する(FR-001, FR-005: 認証不要・200レスポンス)(T005に依存)
+- [X] T007 [P] [US1] `apps/api/app/routes/hello.py`の`hello()`にOpenAPI用docstringを追記する(T005に依存)
+- [X] T008 [P] [US1] `apps/api/app/routes/auth.py`の`register()`/`login()`/`logout()`/`me()`にOpenAPI用docstringを追記する(FR-002, FR-005: register/loginは`RegisterSchema`/`LoginSchema`を`$ref`、レスポンスは`UserSchema`。logout/meは`@login_required`のため401レスポンスも記載)(T005に依存)
+- [X] T009 [P] [US1] `apps/api/app/routes/todos.py`の`list_todos()`/`get_todo()`/`create_todo()`/`update_todo()`/`delete_todo()`にOpenAPI用docstringを追記する(FR-002, FR-005: `TodoSchema`を`$ref`、404/401レスポンスも記載)(T005に依存)
+- [X] T010 [US1] `generate_openapi.py`に、T006〜T009で対象にした全View関数を`spec.path(view=...)`で登録する処理を追加する(T006, T007, T008, T009に依存)
+- [X] T011 [US1] `python generate_openapi.py`を実行し、リポジトリルート直下に`openapi.json`が生成されることを確認する(T010に依存)
 
 **Checkpoint**: 実装済み全エンドポイントの契約が生成物として得られる
 
@@ -70,8 +70,8 @@ description: "Task list template for feature implementation"
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] `apps/api/tests/test_openapi_generation.py`に、生成された`openapi.json`の`paths`に対象8エンドポイント(`/api/health`, `/api/hello`, `/api/register`, `/api/login`, `/api/logout`, `/api/me`, `/api/todos`, `/api/todos/{todo_id}`)がすべて含まれることを検証するテストを実装する(SC-001)(T011に依存)
-- [ ] T013 [US2] `apps/api/tests/test_openapi_generation.py`に、生成を2回連続で実行して`openapi.json`の内容が一致すること(FR-006: 再実行可能性)を検証するテストを実装する(T012に依存)
+- [X] T012 [US2] `apps/api/tests/test_openapi_generation.py`に、生成された`openapi.json`の`paths`に対象8エンドポイント(`/api/health`, `/api/hello`, `/api/register`, `/api/login`, `/api/logout`, `/api/me`, `/api/todos`, `/api/todos/{todo_id}`)がすべて含まれることを検証するテストを実装する(SC-001)(T011に依存)
+- [X] T013 [US2] `apps/api/tests/test_openapi_generation.py`に、生成を2回連続で実行して`openapi.json`の内容が一致すること(FR-006: 再実行可能性)を検証するテストを実装する(T012に依存)
 
 **Checkpoint**: 生成結果が自動テストで保証される
 
@@ -81,9 +81,9 @@ description: "Task list template for feature implementation"
 
 **Purpose**: ドキュメント整合と最終確認
 
-- [ ] T014 [P] `apps/api/README.md`に「openapi.jsonの生成方法」節を追加する(quickstart.mdの手順を要約して転記)
-- [ ] T015 `apps/api`ディレクトリで`python -m pytest`を実行し、`005-api-tests`の既存テストを含め全テストがパスすることを確認する(既存テストへの回帰がないことの確認)(T013に依存)
-- [ ] T016 `quickstart.md`の全手順を通しで再実行し、最終確認する(T011〜T015に依存)
+- [X] T014 [P] `apps/api/README.md`に「openapi.jsonの生成方法」節を追加する(quickstart.mdの手順を要約して転記)
+- [X] T015 `apps/api`ディレクトリで`python -m pytest`を実行し、`005-api-tests`の既存テストを含め全テストがパスすることを確認する(既存テストへの回帰がないことの確認)(T013に依存)
+- [X] T016 `quickstart.md`の全手順を通しで再実行し、最終確認する(T011〜T015に依存)
 
 ---
 

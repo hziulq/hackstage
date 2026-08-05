@@ -105,3 +105,19 @@ python -m pytest
 - `Flask-Limiter`のインメモリストレージは各テスト前にリセットされる(テスト間でログイン試行回数が
   引き継がれない)。
 - 実装の詳細は `specs/005-api-tests/` (spec.md / research.md / tasks.md) を参照。
+
+## openapi.jsonの生成方法
+
+`006-openapi-generation`で整備。`dev` コンテナ内、`apps/api` ディレクトリで:
+
+```bash
+python generate_openapi.py
+```
+
+- リポジトリルート直下の `openapi.json` が生成・更新される(`web`側の型生成はこれを起点にする。憲章 原則V)。
+- `create_app()`のルーティング情報と各Viewのdocstring(YAML)、既存のmarshmallow Schema
+  (`RegisterSchema`/`LoginSchema`/`UserSchema`/`TodoSchema`)から生成する。DB接続は不要。
+- 対象は実装済みエンドポイントのみ。エンドポイントを追加・変更した場合は、対応するView関数の
+  docstringと`generate_openapi.py`の`view_functions`一覧を更新してから再実行する。
+- `openapi.json`は生成物である。手動編集は次回の再生成で失われる(CONTRIBUTING.md §4)。
+- 実装の詳細は `specs/006-openapi-generation/` (spec.md / research.md / tasks.md) を参照。
