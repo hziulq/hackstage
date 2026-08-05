@@ -25,10 +25,10 @@ description: "Task list template for feature implementation"
 
 **Purpose**: pytest導入とテストディレクトリの土台
 
-- [ ] T001 [P] `apps/api/requirements.txt`に`pytest`をバージョン固定で追加する(憲章 原則V)
-- [ ] T002 依存を反映する: devコンテナ内で`pip install --user -r apps/api/requirements.txt`(T001に依存)
-- [ ] T003 [P] `apps/api/pytest.ini`を新規作成し、`testpaths = tests`を設定する
-- [ ] T004 [P] `apps/api/tests/__init__.py`を新規作成する(空ファイル)
+- [X] T001 [P] `apps/api/requirements.txt`に`pytest`をバージョン固定で追加する(憲章 原則V)
+- [X] T002 依存を反映する: devコンテナ内で`pip install --user -r apps/api/requirements.txt`(T001に依存)
+- [X] T003 [P] `apps/api/pytest.ini`を新規作成し、`testpaths = tests`を設定する
+- [X] T004 [P] `apps/api/tests/__init__.py`を新規作成する(空ファイル)
 
 ---
 
@@ -38,11 +38,11 @@ description: "Task list template for feature implementation"
 
 **⚠️ CRITICAL**: このフェーズ完了までUser Storyのテストは書けない
 
-- [ ] T005 `apps/api/tests/conftest.py`に`app`fixtureを実装する(`create_app()`を呼び、テスト用の`SECRET_KEY`等が環境変数として既に用意されていることを前提とする)(T002に依存)
-- [ ] T006 `apps/api/tests/conftest.py`に、research.md §2で決定したSAVEPOINTベースのトランザクションfixture(autouse)を実装する。テスト前に`db.engine.connect()`でトランザクションとネストしたSAVEPOINTを開始し、`db.session`をそのconnectionにbindする。テスト後に必ずrollbackし、開発用DBにデータを残さない(T005に依存)
-- [ ] T007 `apps/api/tests/conftest.py`に、`limiter`のストレージをテストごとにリセットするfixture(autouse)を実装する。research.md §3のとおり、テスト間でログイン試行回数が引き継がれないようにする(T005に依存)
-- [ ] T008 [P] `apps/api/tests/conftest.py`に`client`fixture(`app.test_client()`を返す)を実装する(T005に依存)
-- [ ] T009 [P] `apps/api/tests/conftest.py`に、テスト用利用者を作成するヘルパー関数`create_user(email, password, display_name)`を実装する(data-model.mdのテスト用利用者の形に従う)(T006に依存)
+- [X] T005 `apps/api/tests/conftest.py`に`app`fixtureを実装する(`create_app()`を呼び、テスト用の`SECRET_KEY`等が環境変数として既に用意されていることを前提とする)(T002に依存)
+- [X] T006 `apps/api/tests/conftest.py`に、research.md §2で決定したSAVEPOINTベースのトランザクションfixture(autouse)を実装する(T005に依存)— 実装時にSQLAlchemy 2.0の`Session(..., join_transaction_mode="create_savepoint")`を採用し、手動のイベントリスナーによるSAVEPOINT再開処理を書かずに済ませた(research.mdで想定していたイベントリスナー方式より単純)
+- [X] T007 `apps/api/tests/conftest.py`に、`limiter`のストレージをテストごとにリセットするfixture(autouse)を実装する。research.md §3のとおり、テスト間でログイン試行回数が引き継がれないようにする(T005に依存)
+- [X] T008 [P] `apps/api/tests/conftest.py`に`client`fixture(`app.test_client()`を返す)を実装する(T005に依存)
+- [X] T009 [P] `apps/api/tests/conftest.py`に、テスト用利用者を作成するヘルパー関数`create_user(email, password, display_name)`を実装する(data-model.mdのテスト用利用者の形に従う)(T006に依存)
 
 **Checkpoint**: ここまで完了すればUser Storyのテストを書き始められる
 
@@ -56,11 +56,11 @@ description: "Task list template for feature implementation"
 
 ### Implementation for User Story 1
 
-- [ ] T010 [P] [US1] `apps/api/tests/test_auth.py`に登録成功のテストを実装する(FR-001)。未登録メールで`POST /api/register`を呼び、201とレスポンス形式(`password_hash`を含まない)を検証する
-- [ ] T011 [P] [US1] `apps/api/tests/test_auth.py`に重複登録拒否のテストを実装する(FR-002)。同一メールで2回登録し、2回目が400 `invalid_request`になることを検証する
-- [ ] T012 [P] [US1] `apps/api/tests/test_auth.py`にログイン成功と`/api/me`のテストを実装する(FR-003, FR-006)。登録済みの利用者でログインし、`client`のCookieが引き継がれた状態で`/api/me`が200・本人の情報を返すことを検証する
-- [ ] T013 [P] [US1] `apps/api/tests/test_auth.py`にログイン失敗時の一律エラーのテストを実装する(FR-008)。存在しないメールでのログインと、登録済みメール+誤パスワードでのログインの両方が同一のレスポンスボディ・同一の401になることを検証する
-- [ ] T014 [P] [US1] `apps/api/tests/test_auth.py`にログアウトのテストを実装する(FR-005, FR-007)。ログイン後にログアウトし、204が返ること、以降の`/api/me`が401になることを検証する
+- [X] T010 [P] [US1] `apps/api/tests/test_auth.py`に登録成功のテストを実装する(FR-001)。未登録メールで`POST /api/register`を呼び、201とレスポンス形式(`password_hash`を含まない)を検証する
+- [X] T011 [P] [US1] `apps/api/tests/test_auth.py`に重複登録拒否のテストを実装する(FR-002)。同一メールで2回登録し、2回目が400 `invalid_request`になることを検証する
+- [X] T012 [P] [US1] `apps/api/tests/test_auth.py`にログイン成功と`/api/me`のテストを実装する(FR-003, FR-006)。登録済みの利用者でログインし、`client`のCookieが引き継がれた状態で`/api/me`が200・本人の情報を返すことを検証する
+- [X] T013 [P] [US1] `apps/api/tests/test_auth.py`にログイン失敗時の一律エラーのテストを実装する(FR-008)。存在しないメールでのログインと、登録済みメール+誤パスワードでのログインの両方が同一のレスポンスボディ・同一の401になることを検証する
+- [X] T014 [P] [US1] `apps/api/tests/test_auth.py`にログアウトのテストを実装する(FR-005, FR-007)。ログイン後にログアウトし、204が返ること、以降の`/api/me`が401になることを検証する
 
 **Checkpoint**: 認証機能の回帰が単独で検知可能
 
@@ -74,9 +74,9 @@ description: "Task list template for feature implementation"
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] `apps/api/tests/test_todos.py`に未ログイン時の拒否テストを実装する(FR-005)。未ログインで`GET /api/todos`, `POST /api/todos`を呼び、いずれも401になることを検証する(T009に依存)
-- [ ] T016 [US2] `apps/api/tests/test_todos.py`に所有者分離のテストを実装する(FR-006)。利用者Aと利用者Bをそれぞれ作成し、Aが自分のTodoを作成後、Bとしてログインして一覧・詳細取得してもAのTodoが含まれない・404になることを検証する(T009, T015に依存)
-- [ ] T017 [US2] `apps/api/tests/test_todos.py`に、自分のTodoに対するCRUD(作成・一覧・更新・削除)が成功することのテストを実装する(既存の`quickstart.md`シナリオ5相当)(T016に依存)
+- [X] T015 [US2] `apps/api/tests/test_todos.py`に未ログイン時の拒否テストを実装する(FR-005)。未ログインで`GET /api/todos`, `POST /api/todos`を呼び、いずれも401になることを検証する(T009に依存)
+- [X] T016 [US2] `apps/api/tests/test_todos.py`に所有者分離のテストを実装する(FR-006)。利用者Aと利用者Bをそれぞれ作成し、Aが自分のTodoを作成後、Bとしてログインして一覧・詳細取得してもAのTodoが含まれない・404になることを検証する(T009, T015に依存)
+- [X] T017 [US2] `apps/api/tests/test_todos.py`に、自分のTodoに対するCRUD(作成・一覧・更新・削除)が成功することのテストを実装する(既存の`quickstart.md`シナリオ5相当)(T016に依存)
 
 **Checkpoint**: todosの所有者分離の回帰が単独で検知可能
 
@@ -90,7 +90,7 @@ description: "Task list template for feature implementation"
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] `apps/api/tests/test_auth_rate_limit.py`にレート制限のテストを実装する(FR-004)。同一送信元から`POST /api/login`を規定回数(research.md参照。既存実装は5回/分)を超えて呼び、超過分が429になることを検証する。T007のリセットfixtureにより他テストの試行回数と干渉しないことを前提にする(T007に依存)
+- [X] T018 [US3] `apps/api/tests/test_auth_rate_limit.py`にレート制限のテストを実装する(FR-004)。同一送信元から`POST /api/login`を規定回数(research.md参照。既存実装は5回/分)を超えて呼び、超過分が429になることを検証する。T007のリセットfixtureにより他テストの試行回数と干渉しないことを前提にする(T007に依存)
 
 **Checkpoint**: 全User Story(P1〜P3)の回帰が自動検知可能
 
@@ -100,9 +100,9 @@ description: "Task list template for feature implementation"
 
 **Purpose**: ドキュメント整合とテストスイート全体の最終確認
 
-- [ ] T019 [P] `apps/api/README.md`に「テストの実行方法」節を追加する(quickstart.mdの手順を要約して転記)
-- [ ] T020 `apps/api`ディレクトリで`python -m pytest`を実行し、全テストがパスすることを確認する(T010〜T018に依存)
-- [ ] T021 `quickstart.md`の「テスト後のDB確認」手順を実行し、テスト実行前後で`users`/`todos`の件数が変化しないことを確認する(T020に依存)
+- [X] T019 [P] `apps/api/README.md`に「テストの実行方法」節を追加する(quickstart.mdの手順を要約して転記)
+- [X] T020 `apps/api`ディレクトリで`python -m pytest`を実行し、全テストがパスすることを確認する(T010〜T018に依存)— 9件全てPASS
+- [X] T021 `quickstart.md`の「テスト後のDB確認」手順を実行し、テスト実行前後で`users`/`todos`の件数が変化しないことを確認する(T020に依存)— 実行前後とも0件で変化なし
 
 ---
 
