@@ -39,6 +39,17 @@ git clone <このリポジトリのURL> hackstage
 cd hackstage
 ```
 
+`git clone`はデフォルトブランチ(`main`)を取得する。修正が`preview`にしかマージされておらず
+`main`への同期が漏れていることがあるため、ビルドに失敗した場合はまず
+
+```bash
+git fetch origin
+git log origin/main..origin/preview --oneline   # mainに無いpreviewのコミットを確認
+```
+
+で`main`が最新か確認する。追従していなければ`git checkout preview && git pull origin preview`で
+`preview`に切り替えるか、`main`への同期PRのマージを待つ。
+
 ### 4. `.env`を作る
 
 ```bash
