@@ -30,6 +30,11 @@ services:
         required: false
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    volumes:
+      # apps/api/app/extensions.py の MIGRATIONS_DIR はコンテナ内で /migrations に
+      # 解決される。api イメージのビルドコンテキストは ./apps/api だけなので、
+      # リポジトリルートの migrations/ を明示的にマウントしないと flask db upgrade が失敗する
+      - ./migrations:/migrations:ro
     expose:
       - "8000"
     depends_on:
