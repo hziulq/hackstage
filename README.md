@@ -187,9 +187,10 @@ apps/api/README.md
 
 フロントエンドは `apps/web` に配置されています。画面の実装（ログイン・タイムライン・目標・掲示板等）自体は
 進んでいますが、`compose.yaml` の `web` サービスは `profiles: [app]` を付けて無効化したままのため、
-Dev Container を開いただけでは自動起動しません。
+Dev Container を開いただけでは自動起動しません。恒久的に有効化する手順は `compose.yaml` の
+コメントを参照してください。
 
-`dev` コンテナ内で以下を実行してください。
+それまでは `dev` コンテナ内で以下を実行してください。
 
 ```bash
 cd apps/web
