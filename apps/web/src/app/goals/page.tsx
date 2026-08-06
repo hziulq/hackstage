@@ -1,44 +1,92 @@
 "use client";
 
-import { useLocalStorageState } from "@/hooks/useLocalStorageState";
-import { INITIAL_GOALS } from "@/lib/mock-data";
-import { generateMilestones } from "@/lib/milestones";
+import { useEffect, useState } from "react";
+import { goalsClient, type ApiGoal } from "@/lib/goals";
+import { ApiError } from "@/lib/api";
 import type { Goal } from "@/lib/types";
 import GoalForm from "@/components/goals/GoalForm";
 import GoalCard from "@/components/goals/GoalCard";
 
+function toGoal(g: ApiGoal): Goal {
+  return {
+    id: String(g.id),
+    companyName: g.company_name,
+    stage: g.stage,
+    targetDate: g.target_date,
+    createdAt: g.created_at ?? new Date().toISOString(),
+    milestones: (g.milestones ?? []).map((m) => ({
+      id: String(m.id),
+      title: m.title ?? "",
+      dueDate: m.due_date ?? g.target_date,
+      offsetDays: m.offset_days ?? 0,
+      done: m.done ?? false,
+    })),
+  };
+}
+
 export default function GoalsPage() {
-  const [goals, setGoals] = useLocalStorageState<Goal[]>("hackstage:goals", INITIAL_GOALS);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleCreate(input: { companyName: string; stage: string; targetDate: string }) {
-    const newGoal: Goal = {
-      id: `g-${Date.now()}`,
-      companyName: input.companyName,
-      stage: input.stage,
-      targetDate: input.targetDate,
-      createdAt: new Date().toISOString(),
-      milestones: generateMilestones(input.targetDate),
+  useEffect(() => {
+    let cancelled = false;
+    goalsClient
+      .list()
+      .then((apiGoals) => {
+        if (!cancelled) setGoals(apiGoals.map(toGoal));
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof ApiError ? err.message : "読み込みに失敗しました");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
     };
-    setGoals((prev) => [newGoal, ...prev]);
+  }, []);
+
+  async function handleCreate(input: { companyName: string; stage: string; targetDate: string }) {
+    try {
+      const created = await goalsClient.create(input);
+      setGoals((prev) => [toGoal(created), ...prev]);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "作成に失敗しました");
+    }
   }
 
-  function handleToggleMilestone(goalId: string, milestoneId: string) {
-    setGoals((prev) =>
-      prev.map((g) =>
-        g.id !== goalId
-          ? g
-          : {
-              ...g,
-              milestones: g.milestones.map((m) =>
-                m.id === milestoneId ? { ...m, done: !m.done } : m
-              ),
-            }
-      )
-    );
+  async function handleToggleMilestone(goalId: string, milestoneId: string) {
+    const goal = goals.find((g) => g.id === goalId);
+    const milestone = goal?.milestones.find((m) => m.id === milestoneId);
+    if (!goal || !milestone) return;
+
+    try {
+      await goalsClient.toggleMilestone(Number(goalId), Number(milestoneId), !milestone.done);
+      setGoals((prev) =>
+        prev.map((g) =>
+          g.id !== goalId
+            ? g
+            : {
+                ...g,
+                milestones: g.milestones.map((m) =>
+                  m.id === milestoneId ? { ...m, done: !m.done } : m
+                ),
+              }
+        )
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "更新に失敗しました");
+    }
   }
 
-  function handleDelete(goalId: string) {
-    setGoals((prev) => prev.filter((g) => g.id !== goalId));
+  async function handleDelete(goalId: string) {
+    try {
+      await goalsClient.remove(Number(goalId));
+      setGoals((prev) => prev.filter((g) => g.id !== goalId));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "削除に失敗しました");
+    }
   }
 
   return (
@@ -46,13 +94,17 @@ export default function GoalsPage() {
       <header>
         <h1 className="text-lg font-bold">目標＆逆算ToDo</h1>
         <p className="text-xs text-[var(--color-muted)]">
-          目標日を決めると、8つのマイルストーンを自動で逆算します
+          目標日を決めると、マイルストーンを自動で逆算します
         </p>
       </header>
 
+      {error && <p className="text-xs text-red-500">{error}</p>}
+
       <GoalForm onCreate={handleCreate} />
 
-      {goals.length === 0 ? (
+      {loading ? (
+        <p className="py-8 text-center text-sm text-[var(--color-muted)]">読み込み中...</p>
+      ) : goals.length === 0 ? (
         <p className="py-8 text-center text-sm text-[var(--color-muted)]">
           まだゴールが設定されていません
         </p>

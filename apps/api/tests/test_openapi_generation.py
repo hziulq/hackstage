@@ -20,6 +20,7 @@ EXPECTED_PATHS = {
     "/api/events",
     "/api/reactions",
     "/api/reactions/{reaction_id}",
+    "/api/calendars/mine",
     "/api/calendars/{calendar_id}",
     "/api/calendars/{calendar_id}/members",
 }

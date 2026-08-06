@@ -17,10 +17,13 @@ class GoalSchema(Schema):
     # 選考ステージ。フロントの選択肢が変わりやすいため DB enum ではなく文字列を validate する。
     stage = fields.Str(required=True, validate=validate.Length(min=1, max=50))
     target_date = fields.Date(required=True)
+    # Goal.milestones(db.relationship)をネストして返す。フロントが目標と一緒に
+    # マイルストーンを取得できるようにする(専用の一覧エンドポイントは無い)。
+    milestones = fields.Nested("GoalMilestoneSchema", many=True, dump_only=True)
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
- 
- 
+
+
 goal_schema = GoalSchema()
 goals_schema = GoalSchema(many=True)
  

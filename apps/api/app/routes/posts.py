@@ -5,7 +5,12 @@ from marshmallow import ValidationError
 from ..extensions import db
 from ..models.board import POST_CATEGORIES, Post, PostComment
 from ..models.calendar import Calendar
-from ..schemas.post import post_comment_schema, post_schema, posts_schema
+from ..schemas.post import (
+    post_comment_schema,
+    post_comments_schema,
+    post_schema,
+    posts_schema,
+)
 from .utils import error_response, is_calendar_member
 
 posts_bp = Blueprint("posts", __name__, url_prefix="/api")
@@ -142,6 +147,38 @@ def create_post():
     db.session.add(post)
     db.session.commit()
     return jsonify(_serialize_post(post)), 201
+
+
+@posts_bp.get("/posts/<int:post_id>/comments")
+@login_required
+def list_post_comments(post_id):
+    """
+    ---
+    get:
+      summary: 投稿のコメント一覧を取得する
+      security:
+        - cookieAuth: []
+      responses:
+        200:
+          description: 正常
+          content:
+            application/json:
+              schema:
+                type: array
+                items: PostCommentSchema
+        401:
+          description: 未ログイン
+        404:
+          description: 対象の投稿が存在しない
+    """
+    post = Post.query.get(post_id)
+    if post is None:
+        return error_response("not_found", "投稿が見つかりません。", status=404)
+
+    comments = (
+        PostComment.query.filter_by(post_id=post_id).order_by(PostComment.created_at.asc()).all()
+    )
+    return jsonify(post_comments_schema.dump(comments)), 200
 
 
 @posts_bp.post("/posts/<int:post_id>/comments")

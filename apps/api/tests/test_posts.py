@@ -24,11 +24,39 @@ def test_posts_requires_login(client):
     create_resp = client.post(
         "/api/posts", json={"category": "anonymous_qa", "body": "質問です"}
     )
+    comments_list_resp = client.get("/api/posts/1/comments")
     comment_resp = client.post("/api/posts/1/comments", json={"body": "回答です"})
 
     assert list_resp.status_code == 401
     assert create_resp.status_code == 401
+    assert comments_list_resp.status_code == 401
     assert comment_resp.status_code == 401
+
+
+def test_list_post_comments(client):
+    author = create_user("comment-author@example.com")
+    _login(client, "comment-author@example.com")
+
+    post_resp = client.post(
+        "/api/posts", json={"category": "anonymous_qa", "body": "質問です"}
+    )
+    post_id = post_resp.get_json()["id"]
+
+    empty_resp = client.get(f"/api/posts/{post_id}/comments")
+    assert empty_resp.status_code == 200
+    assert empty_resp.get_json() == []
+
+    client.post(f"/api/posts/{post_id}/comments", json={"body": "回答です"})
+
+    list_resp = client.get(f"/api/posts/{post_id}/comments")
+    assert list_resp.status_code == 200
+    comments = list_resp.get_json()
+    assert len(comments) == 1
+    assert comments[0]["body"] == "回答です"
+    assert comments[0]["user_id"] == author.id
+
+    missing_resp = client.get("/api/posts/999999/comments")
+    assert missing_resp.status_code == 404
 
 
 def test_create_post_uses_current_user(client):
