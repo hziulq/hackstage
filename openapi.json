@@ -612,6 +612,45 @@
             "description": "参加していないカレンダー"
           }
         }
+      },
+      "post": {
+        "summary": "予定を作成する。user_idはクライアントから指定できない",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Event"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "作成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "参加していないカレンダー"
+          }
+        }
       }
     },
     "/api/reactions": {
@@ -785,6 +824,95 @@
           },
           "404": {
             "description": "存在しない、または参加していないカレンダー"
+          }
+        }
+      }
+    },
+    "/api/calendars": {
+      "post": {
+        "summary": "グループカレンダーを作成する。作成者は自動的にownerとして参加する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "作成成功(招待コードを含む)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Calendar"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          }
+        }
+      }
+    },
+    "/api/calendars/join": {
+      "post": {
+        "summary": "招待コードでグループカレンダーに参加する。参加済みなら200(冪等)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarJoin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "新規に参加した",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Calendar"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "既に参加済み",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Calendar"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "招待コードが見つからない"
           }
         }
       }
@@ -1302,6 +1430,34 @@
             "nullable": true
           }
         },
+        "additionalProperties": false
+      },
+      "CalendarCreate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "CalendarJoin": {
+        "type": "object",
+        "properties": {
+          "invite_code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "invite_code"
+        ],
         "additionalProperties": false
       }
     },
