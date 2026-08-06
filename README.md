@@ -6,6 +6,18 @@ Hackstage は、Next.js・Flask・PostgreSQL を使用したフルスタック W
 
 ---
 
+## 規約はこの3文書にある
+
+作業を始める前に読むこと。**規約値は本READMEに再掲しない**（1箇所にのみ書く方針のため）。
+
+| 文書 | 内容 |
+|---|---|
+| [`.specify/memory/constitution.md`](.specify/memory/constitution.md) | **憲章**。原則・禁止事項・レビューゲート。全員が一度読む |
+| [`docs/design.md`](docs/design.md) | 技術スタック・構成・環境変数・API 契約・Render 設定値。実装中に引く |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | ブランチ運用・PR 手順・マージ衝突の解消・Spec Kit の使い方 |
+
+---
+
 ## 概要
 
 - Next.js と Flask を利用したフルスタック構成
@@ -122,6 +134,13 @@ docker compose run --rm dev bash
 
 ---
 
+## デプロイ
+
+本番は `render.yaml`（Render Blueprint）を正とする。審査など最長3日程度の短期利用に限っては、
+[`docs/vps-deploy.md`](docs/vps-deploy.md) のVPS(Vultr)手順を使う。
+
+---
+
 ## ディレクトリ構成
 
 ```text
@@ -133,7 +152,8 @@ docker compose run --rm dev bash
 ├── migrations/               # データベースマイグレーション
 ├── specs/                    # 仕様書
 ├── .devcontainer/            # Dev Container 設定
-├── compose.yaml              # Docker Compose
+├── compose.yaml              # Docker Compose（ローカル開発）
+├── compose.prod.yaml         # Docker Compose（VPS本番、docs/vps-deploy.md）
 ├── openapi.json              # OpenAPI 定義
 ├── ONBOARDING.md             # 初回セットアップ
 └── CONTRIBUTING.md           # コントリビューションガイド
@@ -149,7 +169,7 @@ docker compose run --rm dev bash
 | PostgreSQL | 利用可能 |
 | Dev Container | 利用可能 |
 | Docker Compose | 利用可能 |
-| フロントエンド | 開発中 |
+| フロントエンド | 実装済み（自動起動は未設定） |
 
 ### API
 
@@ -165,21 +185,18 @@ apps/api/README.md
 
 ### Web
 
-フロントエンドは `apps/web` に配置されています。
+フロントエンドは `apps/web` に配置されています。画面の実装（ログイン・タイムライン・目標・掲示板等）自体は
+進んでいますが、`compose.yaml` の `web` サービスは `profiles: [app]` を付けて無効化したままのため、
+Dev Container を開いただけでは自動起動しません。
 
-現在は初期構成のみで、Compose では以下の設定により自動起動しません。
-
-```yaml
-profiles: [app]
-```
-
-フロントエンドのセットアップ後は、
+`dev` コンテナ内で以下を実行してください。
 
 ```bash
+cd apps/web
 npm run dev
 ```
 
-を実行し、
+起動後、
 
 ```
 http://localhost:3000
@@ -213,10 +230,9 @@ PostgreSQL
 | ファイル | 内容 |
 |----------|------|
 | ONBOARDING.md | 初回セットアップ |
-| docs/design.md | システム設計・環境変数・API |
-| CONTRIBUTING.md | 開発フロー |
-| .specify/memory/constitution.md | 開発方針 |
 | apps/api/README.md | API ドキュメント |
+
+上記3文書（規約）以外の参考資料。規約は必ず本README冒頭の表を参照してください。
 
 ---
 
