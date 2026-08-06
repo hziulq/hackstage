@@ -56,6 +56,11 @@ docker compose run --rm dev bash # 作業用コンテナに入る
 `.devcontainer/Dockerfile` にツールを明示しているので、VS Code 経由でも
 `docker compose` 経由でも同じ中身になる。
 
+## デプロイ
+
+本番は `render.yaml`（Render Blueprint）を正とする。審査など最長3日程度の短期利用に限っては、
+[`docs/vps-deploy.md`](docs/vps-deploy.md) のVPS(Vultr)手順を使う。
+
 ## 現状
 
 `apps/api` の骨格が入り、`api` サービスは devcontainer を開くと自動で起動する
