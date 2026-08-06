@@ -28,13 +28,22 @@ def create_app():
     from .routes.auth import bp as auth_bp
     from .routes.health import bp as health_bp
     from .routes.hello import bp as hello_bp
-    from .routes.todos import (
-        bp as todos_bp,  # feature/dragon-db-test の dragon_bp はTodoに移植して削除した
-    )
+    from .routes.todos import bp as todos_bp  # feature/dragon-db-test の dragon_bp はTodoに移植して削除した
+    from .routes.posts import posts_bp
+    from .routes.goals import goals_bp
+    from .routes.events import events_bp
+    from .routes.reactions import reactions_bp
+    from .routes.calendars import calendars_bp
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(health_bp)
     app.register_blueprint(hello_bp)
     app.register_blueprint(todos_bp)
+    app.register_blueprint(posts_bp)
+    app.register_blueprint(goals_bp)
+    app.register_blueprint(events_bp)
+    app.register_blueprint(reactions_bp)
+    app.register_blueprint(calendars_bp)
 
     # 未知のルートに対するJSONの404(dragon-db-testのerrorhandlerを、
     # docs/design.md §7 のエラー形式 {"error": {"code", "message"}} に合わせて採用)

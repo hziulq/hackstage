@@ -11,6 +11,16 @@ from apispec import APISpec
 from apispec.ext.marshmallow import MarshmallowPlugin
 from apispec_webframeworks.flask import FlaskPlugin
 from app import create_app
+from app.schemas.calendar import CalendarSchema
+from app.schemas.event import EventSchema
+from app.schemas.goal import (
+    GoalCreateSchema,
+    GoalMilestonePatchSchema,
+    GoalMilestoneSchema,
+    GoalSchema,
+)
+from app.schemas.post import PostCommentSchema, PostSchema
+from app.schemas.reaction import ReactionSchema
 from app.schemas.todo import TodoSchema
 from app.schemas.user import LoginSchema, RegisterSchema, UserSchema
 
@@ -38,6 +48,16 @@ def build_spec():
     spec.components.schema("Login", schema=LoginSchema)
     spec.components.schema("User", schema=UserSchema)
     spec.components.schema("Todo", schema=TodoSchema)
+    # 010-secure-social-api: 認証統合済みの posts/goals/events/reactions/calendars を追加。
+    spec.components.schema("Post", schema=PostSchema)
+    spec.components.schema("PostComment", schema=PostCommentSchema)
+    spec.components.schema("Goal", schema=GoalSchema)
+    spec.components.schema("GoalCreate", schema=GoalCreateSchema)
+    spec.components.schema("GoalMilestone", schema=GoalMilestoneSchema)
+    spec.components.schema("GoalMilestonePatch", schema=GoalMilestonePatchSchema)
+    spec.components.schema("Event", schema=EventSchema)
+    spec.components.schema("Reaction", schema=ReactionSchema)
+    spec.components.schema("Calendar", schema=CalendarSchema)
 
     app = create_app()
 
@@ -54,6 +74,19 @@ def build_spec():
         app.view_functions["todos.create_todo"],
         app.view_functions["todos.update_todo"],
         app.view_functions["todos.delete_todo"],
+        # 010-secure-social-api: 認証統合済みの新規エンドポイント。
+        app.view_functions["posts.list_posts"],
+        app.view_functions["posts.create_post"],
+        app.view_functions["posts.create_post_comment"],
+        app.view_functions["goals.list_goals"],
+        app.view_functions["goals.create_goal"],
+        app.view_functions["goals.update_milestone"],
+        app.view_functions["goals.delete_goal"],
+        app.view_functions["events.list_events"],
+        app.view_functions["reactions.create_reaction"],
+        app.view_functions["reactions.delete_reaction"],
+        app.view_functions["calendars.get_calendar"],
+        app.view_functions["calendars.list_calendar_members"],
     ]
 
     with app.test_request_context():
