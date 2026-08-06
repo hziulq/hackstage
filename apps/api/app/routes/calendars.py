@@ -9,7 +9,11 @@ from ..extensions import db
 from ..models.calendar import Calendar, CalendarMember
 from ..models.score import PointEvent
 from ..models.user import User
-from ..schemas.calendar import calendar_create_schema, calendar_join_schema, calendar_schema
+from ..schemas.calendar import (
+    calendar_create_schema,
+    calendar_join_schema,
+    calendar_schema,
+)
 from .utils import error_response, is_calendar_member
 
 calendars_bp = Blueprint("calendars", __name__, url_prefix="/api")

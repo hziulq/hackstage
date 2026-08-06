@@ -1,6 +1,6 @@
 from app.extensions import db as _db
-from app.models.calendar import Calendar, CalendarMember
 from app.models.board import Post
+from app.models.calendar import Calendar, CalendarMember
 
 from .conftest import create_user
 
@@ -75,7 +75,7 @@ def test_create_post_uses_current_user(client):
 
 
 def test_create_post_rejects_client_supplied_user_id(client):
-    owner = create_user("post-owner2@example.com")
+    create_user("post-owner2@example.com")
     other = create_user("post-other2@example.com")
     _login(client, "post-owner2@example.com")
 

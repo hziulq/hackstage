@@ -9,7 +9,6 @@ from ..schemas.post import (
     post_comment_schema,
     post_comments_schema,
     post_schema,
-    posts_schema,
 )
 from .utils import error_response, is_calendar_member
 

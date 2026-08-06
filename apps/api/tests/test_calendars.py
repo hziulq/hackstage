@@ -112,7 +112,7 @@ def test_join_group_calendar_with_invalid_code_gets_404(client):
 
 
 def test_join_group_calendar_is_idempotent(client):
-    owner = create_user("join-owner@example.com")
+    create_user("join-owner@example.com")
     joiner = create_user("join-joiner@example.com")
 
     _login(client, "join-owner@example.com")

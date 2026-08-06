@@ -47,14 +47,21 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r apps/api/requirements.txt
+      - name: DBスキーマを作る(flask db upgrade)
+        run: flask db upgrade
+        working-directory: apps/api
+        env:
+          FLASK_APP: wsgi.py
       - run: python -m pytest
         working-directory: apps/api
 
   openapi-check:
     runs-on: ubuntu-latest
     env:
-      # generate_openapi.py は DB に接続しないため、SECRET_KEY のみダミー値で足りる。
+      # generate_openapi.py はDBに接続しないが、db.init_app()自体はSQLALCHEMY_DATABASE_URIが
+      # 未設定だとエラーになるため、実際には使わないダミー値を設定する。
       SECRET_KEY: ci-only-secret
+      DATABASE_URL: postgresql://unused:unused@localhost/unused
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

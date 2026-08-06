@@ -11,7 +11,11 @@ from apispec import APISpec
 from apispec.ext.marshmallow import MarshmallowPlugin
 from apispec_webframeworks.flask import FlaskPlugin
 from app import create_app
-from app.schemas.calendar import CalendarCreateSchema, CalendarJoinSchema, CalendarSchema
+from app.schemas.calendar import (
+    CalendarCreateSchema,
+    CalendarJoinSchema,
+    CalendarSchema,
+)
 from app.schemas.event import EventSchema
 from app.schemas.goal import GoalCreateSchema, GoalMilestonePatchSchema, GoalSchema
 from app.schemas.post import PostCommentSchema, PostSchema
