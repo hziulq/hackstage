@@ -5,7 +5,8 @@ from ..models.reaction import REACTION_KINDS, REACTION_TARGET_TYPES
  
 class ReactionSchema(Schema):
     id = fields.Int(dump_only=True)
-    user_id = fields.Int(required=True)
+    # 所有者は current_user.id からサーバー側で補う(憲章 原則III)。クライアント指定は受け付けない。
+    user_id = fields.Int(dump_only=True)
     target_type = fields.Str(required=True, validate=validate.OneOf(REACTION_TARGET_TYPES))
     target_id = fields.Int(required=True)
     kind = fields.Str(required=True, validate=validate.OneOf(REACTION_KINDS))

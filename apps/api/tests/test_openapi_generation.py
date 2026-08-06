@@ -11,6 +11,17 @@ EXPECTED_PATHS = {
     "/api/me",
     "/api/todos",
     "/api/todos/{todo_id}",
+    # 010-secure-social-api: 認証統合済みの新規エンドポイント。
+    "/api/posts",
+    "/api/posts/{post_id}/comments",
+    "/api/goals",
+    "/api/goals/{goal_id}",
+    "/api/goals/{goal_id}/milestones/{milestone_id}",
+    "/api/events",
+    "/api/reactions",
+    "/api/reactions/{reaction_id}",
+    "/api/calendars/{calendar_id}",
+    "/api/calendars/{calendar_id}/members",
 }
 
 

@@ -6,7 +6,8 @@ from ..models.event import EVENT_CATEGORIES
 class EventSchema(Schema):
     id = fields.Int(dump_only=True)
     calendar_id = fields.Int(required=True)
-    user_id = fields.Int(required=True)
+    # 所有者は current_user.id からサーバー側で補う(憲章 原則III)。クライアント指定は受け付けない。
+    user_id = fields.Int(dump_only=True)
     category = fields.Str(required=True, validate=validate.OneOf(EVENT_CATEGORIES))
     company_name = fields.Str(required=False, allow_none=True, validate=validate.Length(max=200))
     title = fields.Str(required=True, validate=validate.Length(min=1, max=200))

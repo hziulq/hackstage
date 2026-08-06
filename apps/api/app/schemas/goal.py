@@ -11,7 +11,8 @@ class GoalMilestoneInputSchema(Schema):
  
 class GoalSchema(Schema):
     id = fields.Int(dump_only=True)
-    user_id = fields.Int(required=True)
+    # 所有者は current_user.id からサーバー側で補う(憲章 原則III)。クライアント指定は受け付けない。
+    user_id = fields.Int(dump_only=True)
     company_name = fields.Str(required=True, validate=validate.Length(min=1, max=200))
     # 選考ステージ。フロントの選択肢が変わりやすいため DB enum ではなく文字列を validate する。
     stage = fields.Str(required=True, validate=validate.Length(min=1, max=50))

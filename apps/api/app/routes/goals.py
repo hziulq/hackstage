@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from flask import Blueprint, jsonify, request
+from flask_login import current_user, login_required
 from marshmallow import ValidationError
 
 from ..extensions import db
@@ -26,19 +27,58 @@ DEFAULT_MILESTONE_TEMPLATE = (
 
 
 @goals_bp.get("/goals")
+@login_required
 def list_goals():
-    user_id = request.args.get("user_id", type=int)
-    if user_id is None:
-        return error_response(
-            "missing_user_id", "user_id は必須です。", {"user_id": ["必須項目です。"]}
-        )
-
-    goals = Goal.query.filter(Goal.user_id == user_id).order_by(Goal.target_date.asc()).all()
+    """
+    ---
+    get:
+      summary: 自分の目標一覧を取得する
+      security:
+        - cookieAuth: []
+      responses:
+        200:
+          description: 正常
+          content:
+            application/json:
+              schema:
+                type: array
+                items: GoalSchema
+        401:
+          description: 未ログイン
+    """
+    goals = (
+        Goal.query.filter(Goal.user_id == current_user.id)
+        .order_by(Goal.target_date.asc())
+        .all()
+    )
     return jsonify(goals_schema.dump(goals)), 200
 
 
 @goals_bp.post("/goals")
+@login_required
 def create_goal():
+    """
+    ---
+    post:
+      summary: 目標を作成する(マイルストーン自動生成込み)。user_idはクライアントから指定できない
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: GoalCreateSchema
+      responses:
+        201:
+          description: 作成成功
+          content:
+            application/json:
+              schema: GoalSchema
+        400:
+          description: 入力エラー
+        401:
+          description: 未ログイン
+    """
     payload = request.get_json(silent=True) or {}
     try:
         data = goal_create_schema.load(payload)
@@ -47,7 +87,7 @@ def create_goal():
 
     milestone_inputs = data.pop("milestones", None) or DEFAULT_MILESTONE_TEMPLATE
 
-    goal = Goal(**data)
+    goal = Goal(user_id=current_user.id, **data)
     db.session.add(goal)
     db.session.flush()  # milestone 作成前に goal.id を確定させる
 
@@ -67,31 +107,50 @@ def create_goal():
 
 
 @goals_bp.patch("/goals/<int:goal_id>/milestones/<int:milestone_id>")
+@login_required
 def update_milestone(goal_id, milestone_id):
-    user_id = request.args.get("user_id", type=int)
-    if user_id is None:
-        return error_response(
-            "missing_user_id", "user_id は必須です。", {"user_id": ["必須項目です。"]}
-        )
-
+    """
+    ---
+    patch:
+      summary: 自分の目標のマイルストーン完了状態を切り替える。他人のマイルストーンは404
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: GoalMilestonePatchSchema
+      responses:
+        200:
+          description: 更新成功
+          content:
+            application/json:
+              schema: GoalMilestoneSchema
+        400:
+          description: 入力エラー
+        401:
+          description: 未ログイン
+        404:
+          description: 存在しない、または他人のマイルストーン
+    """
     payload = request.get_json(silent=True) or {}
     try:
         data = goal_milestone_patch_schema.load(payload)
     except ValidationError as err:
         return error_response("validation_error", "入力内容を確認してください。", err.messages)
 
-    # 所有者確認はクエリ条件に含める（todos.py と同じパターン）。
+    # 所有者確認はクエリ条件に含める(todos.py と同じパターン)。
     milestone = (
         GoalMilestone.query.join(Goal, GoalMilestone.goal_id == Goal.id)
         .filter(
             GoalMilestone.id == milestone_id,
             GoalMilestone.goal_id == goal_id,
-            Goal.user_id == user_id,
+            Goal.user_id == current_user.id,
         )
         .first()
     )
     if milestone is None:
-        # 未存在／所有者不一致のどちらも 404 に統一（design.md §7: 権限なし → 404）。
+        # 未存在／所有者不一致のどちらも 404 に統一(design.md §7: 権限なし → 404)。
         return error_response("not_found", "マイルストーンが見つかりません。", status=404)
 
     milestone.done = data["done"]
@@ -100,14 +159,23 @@ def update_milestone(goal_id, milestone_id):
 
 
 @goals_bp.delete("/goals/<int:goal_id>")
+@login_required
 def delete_goal(goal_id):
-    user_id = request.args.get("user_id", type=int)
-    if user_id is None:
-        return error_response(
-            "missing_user_id", "user_id は必須です。", {"user_id": ["必須項目です。"]}
-        )
-
-    goal = Goal.query.filter(Goal.id == goal_id, Goal.user_id == user_id).first()
+    """
+    ---
+    delete:
+      summary: 自分の目標を削除する。他人の目標は404
+      security:
+        - cookieAuth: []
+      responses:
+        204:
+          description: 削除成功
+        401:
+          description: 未ログイン
+        404:
+          description: 存在しない、または他人の目標
+    """
+    goal = Goal.query.filter(Goal.id == goal_id, Goal.user_id == current_user.id).first()
     if goal is None:
         return error_response("not_found", "目標が見つかりません。", status=404)
 
