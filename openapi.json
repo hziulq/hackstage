@@ -1,0 +1,1472 @@
+{
+  "info": {
+    "description": "docs/design.md §7 の契約から生成",
+    "title": "hackstage api",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "ヘルスチェック(認証不要)",
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hello": {
+      "get": {
+        "summary": "挨拶を返す(認証不要)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "hello, world!"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/register": {
+      "post": {
+        "summary": "オープン登録(認証不要)。メール重複は400",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Register"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "登録成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー、またはメール重複"
+          }
+        }
+      }
+    },
+    "/api/login": {
+      "post": {
+        "summary": "認証してセッションCookieを発行する(認証不要)。試行はレート制限あり",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ログイン成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "メール不存在・パスワード誤りを区別しない一律のエラー"
+          },
+          "429": {
+            "description": "レート制限超過"
+          }
+        }
+      }
+    },
+    "/api/logout": {
+      "post": {
+        "summary": "セッションを破棄する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "ログアウト成功"
+          },
+          "401": {
+            "description": "未ログイン"
+          }
+        }
+      }
+    },
+    "/api/me": {
+      "get": {
+        "summary": "現在のユーザー情報を取得する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未ログイン"
+          }
+        }
+      }
+    },
+    "/api/todos": {
+      "get": {
+        "summary": "自分のTodoの一覧を取得する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Todo"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未ログイン"
+          }
+        }
+      },
+      "post": {
+        "summary": "自分のTodoを作成する。user_idはクライアントから指定できない",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Todo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "作成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          }
+        }
+      }
+    },
+    "/api/todos/{todo_id}": {
+      "get": {
+        "summary": "自分のTodoを1件取得する。他人のTodoは404",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "存在しない、または他人のTodo"
+          }
+        }
+      },
+      "put": {
+        "summary": "自分のTodoを更新する。所有者の付け替えはできない",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Todo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "存在しない、または他人のTodo"
+          }
+        }
+      },
+      "delete": {
+        "summary": "自分のTodoを削除する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "削除成功"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "存在しない、または他人のTodo"
+          }
+        }
+      }
+    },
+    "/api/posts": {
+      "get": {
+        "summary": "投稿一覧を取得する。calendar_id指定時は参加者本人のみ",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Post"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "calendar_id指定時、参加していないカレンダー"
+          }
+        }
+      },
+      "post": {
+        "summary": "投稿を作成する。user_idはクライアントから指定できない",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "作成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Post"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "calendar_id指定時、参加していないカレンダー"
+          }
+        }
+      }
+    },
+    "/api/posts/{post_id}/comments": {
+      "get": {
+        "summary": "投稿のコメント一覧を取得する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PostComment"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "対象の投稿が存在しない"
+          }
+        }
+      },
+      "post": {
+        "summary": "投稿にコメントを追加する。user_idはクライアントから指定できない",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostComment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "作成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostComment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "対象の投稿が存在しない"
+          }
+        }
+      }
+    },
+    "/api/goals": {
+      "get": {
+        "summary": "自分の目標一覧を取得する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Goal"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未ログイン"
+          }
+        }
+      },
+      "post": {
+        "summary": "目標を作成する(マイルストーン自動生成込み)。user_idはクライアントから指定できない",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "作成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Goal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          }
+        }
+      }
+    },
+    "/api/goals/{goal_id}/milestones/{milestone_id}": {
+      "patch": {
+        "summary": "自分の目標のマイルストーン完了状態を切り替える。他人のマイルストーンは404",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalMilestonePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalMilestone"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "存在しない、または他人のマイルストーン"
+          }
+        }
+      }
+    },
+    "/api/goals/{goal_id}": {
+      "delete": {
+        "summary": "自分の目標を削除する。他人の目標は404",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "削除成功"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "存在しない、または他人の目標"
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "summary": "カレンダーの予定一覧を取得する。参加者本人のみ。他人のis_private予定は含まれない",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Event"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "参加していないカレンダー"
+          }
+        }
+      },
+      "post": {
+        "summary": "予定を作成する。user_idはクライアントから指定できない",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Event"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "作成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "参加していないカレンダー"
+          }
+        }
+      }
+    },
+    "/api/reactions": {
+      "get": {
+        "summary": "対象(投稿/予定)のリアクション一覧を取得する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Reaction"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "target_type・target_idが不正"
+          },
+          "401": {
+            "description": "未ログイン"
+          }
+        }
+      },
+      "post": {
+        "summary": "リアクションを追加する。user_idはクライアントから指定できない",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reaction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "作成成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reaction"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "既存のリアクションのkindを上書き",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reaction"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "対象が存在しない"
+          }
+        }
+      }
+    },
+    "/api/reactions/{reaction_id}": {
+      "delete": {
+        "summary": "自分のリアクションを削除する。他人のリアクションは404",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "削除成功"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "存在しない、または他人のリアクション"
+          }
+        }
+      }
+    },
+    "/api/calendars/mine": {
+      "get": {
+        "summary": "自分の個人カレンダーを取得する。無ければ作成する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Calendar"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未ログイン"
+          }
+        }
+      }
+    },
+    "/api/calendars/{calendar_id}": {
+      "get": {
+        "summary": "カレンダー基本情報を取得する。参加者本人のみ",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Calendar"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "存在しない、または参加していないカレンダー"
+          }
+        }
+      }
+    },
+    "/api/calendars/{calendar_id}/members": {
+      "get": {
+        "summary": "カレンダー参加者一覧(スコアランキング)を取得する。参加者本人のみ",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "存在しない、または参加していないカレンダー"
+          }
+        }
+      }
+    },
+    "/api/calendars": {
+      "post": {
+        "summary": "グループカレンダーを作成する。作成者は自動的にownerとして参加する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "作成成功(招待コードを含む)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Calendar"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          }
+        }
+      }
+    },
+    "/api/calendars/join": {
+      "post": {
+        "summary": "招待コードでグループカレンダーに参加する。参加済みなら200(冪等)",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarJoin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "新規に参加した",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Calendar"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "既に参加済み",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Calendar"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "入力エラー"
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "招待コードが見つからない"
+          }
+        }
+      }
+    }
+  },
+  "openapi": "3.0.3",
+  "components": {
+    "schemas": {
+      "Register": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8
+          },
+          "display_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "display_name",
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "Login": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "readOnly": true
+          },
+          "display_name": {
+            "type": "string",
+            "readOnly": true
+          },
+          "avatar_url": {
+            "type": "string",
+            "readOnly": true,
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Todo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "user_id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "is_done": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "additionalProperties": false
+      },
+      "Post": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "user_id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "anonymous_qa",
+              "prefecture_intern_info",
+              "timeline"
+            ]
+          },
+          "calendar_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "prefecture_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "nullable": true
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1
+          },
+          "company_name": {
+            "type": "string",
+            "maxLength": 200,
+            "nullable": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 30
+            },
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "body",
+          "category"
+        ],
+        "additionalProperties": false
+      },
+      "PostComment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "post_id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "user_id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "GoalMilestone": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "goal_id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "title": {
+            "type": "string",
+            "readOnly": true
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "readOnly": true
+          },
+          "offset_days": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "done": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "event_id": {
+            "type": "integer",
+            "readOnly": true,
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "Goal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "user_id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "company_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "stage": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "target_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "milestones": {
+            "readOnly": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoalMilestone"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "company_name",
+          "stage",
+          "target_date"
+        ],
+        "additionalProperties": false
+      },
+      "GoalMilestoneInput": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "offset_days": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "offset_days",
+          "title"
+        ],
+        "additionalProperties": false
+      },
+      "GoalCreate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "user_id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "company_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "stage": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          },
+          "target_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoalMilestoneInput"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "company_name",
+          "stage",
+          "target_date"
+        ],
+        "additionalProperties": false
+      },
+      "GoalMilestonePatch": {
+        "type": "object",
+        "properties": {
+          "done": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "done"
+        ],
+        "additionalProperties": false
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "calendar_id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "es",
+              "written_test",
+              "group_discussion",
+              "interview",
+              "info_session",
+              "offer",
+              "other"
+            ]
+          },
+          "company_name": {
+            "type": "string",
+            "maxLength": 200,
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "start_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "is_all_day": {
+            "type": "boolean"
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 200,
+            "nullable": true
+          },
+          "memo": {
+            "type": "string",
+            "nullable": true
+          },
+          "is_private": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "calendar_id",
+          "category",
+          "start_at",
+          "title"
+        ],
+        "additionalProperties": false
+      },
+      "Reaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "user_id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "event",
+              "post"
+            ]
+          },
+          "target_id": {
+            "type": "integer"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "fire",
+              "thumbs_up",
+              "muscle",
+              "party"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "readOnly": true
+          }
+        },
+        "required": [
+          "kind",
+          "target_id",
+          "target_type"
+        ],
+        "additionalProperties": false
+      },
+      "Calendar": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "readOnly": true
+          },
+          "type": {
+            "type": "string",
+            "readOnly": true
+          },
+          "owner_id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "invite_code": {
+            "type": "string",
+            "readOnly": true,
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "CalendarCreate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "CalendarJoin": {
+        "type": "object",
+        "properties": {
+          "invite_code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "invite_code"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session"
+      }
+    }
+  }
+}

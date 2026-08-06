@@ -44,31 +44,80 @@ app/
 ## DB に接続する
 
 `DATABASE_URL` は `compose.yaml` が組み立てて、このコンテナに既に渡っている
-(`app/config.py` の `Config.DATABASE_URL` から読める)。db サービス自体は起動済みなので、
-繋ぐ処理を書けばそのまま使える。
+(`app/config.py` の `Config.DATABASE_URL` / `SQLALCHEMY_DATABASE_URI` から読める)。
+db サービス自体は起動済みなので、繋ぐ処理を書けばそのまま使える。
 
-このリポジトリはまだ ORM を選定・インストールしていない。`requirements.txt` に
-必要なライブラリを追加してから使う。
+ORM は Flask-SQLAlchemy を採用済み。モデルは `app/models/` にある
+(`app/models/__init__.py` で全モデルをインポートし、Alembic の autogenerate が
+検出できるようにしている)。
+
+## マイグレーション（Alembic / Flask-Migrate）
+
+マイグレーション本体はリポジトリルート直下の `migrations/`（このディレクトリではない）にある。
+理由と実行場所は `docs/design.md` §3、並行マイグレーションの運用は `CONTRIBUTING.md` §5 を参照。
+
+**`dev` コンテナから実行する。`api` コンテナには `apps/api` しかマウントされておらず、
+`migrations/` が見えないため。**
 
 ```bash
-# 例: SQLAlchemy を使う場合(ホスト側のターミナルで)
-echo "SQLAlchemy==2.0.35" >> requirements.txt
-echo "psycopg2-binary==2.9.9" >> requirements.txt
-docker compose build api
-docker compose up -d api
+# dev コンテナ内、apps/api で
+cd apps/api
+export FLASK_APP=wsgi.py
+
+# 全員が同じスキーマを再現する（新しく clone した場合・pull で新しいリビジョンが来た場合）
+flask db upgrade
+
+# モデルを変更した後、新しいリビジョンを生成する
+flask db migrate -m "変更内容"
+flask db upgrade
+
+# 適用状況の確認
+flask db current
+flask db history
 ```
 
-```python
-# 接続確認の例(app/config.py の DATABASE_URL を使う)
-from sqlalchemy import create_engine, text
+- `flask db init` は実行済み（`migrations/` が存在する）。**再実行しないこと**（既存履歴を壊す）。
+- `dev` コンテナには `.devcontainer/post-create.sh` が `apps/api/requirements.txt` を
+  インストールするため、`flask` コマンドはコンテナ作成時から使える。
+  `requirements.txt` を変更した場合は `pip install --user -r apps/api/requirements.txt` を
+  `dev` コンテナ内で再実行する（`api` コンテナ用の再ビルドとは別。上の「起動」節を参照）。
+- Autogenerate は ENUM 型の列の変更を完全には検出できないことがある。生成後は必ず差分を目で確認する。
 
-engine = create_engine(Config.DATABASE_URL)
-with engine.connect() as conn:
-    conn.execute(text("select 1"))
+## 認証について
+
+Flask-Login を導入済み(`003-user-auth`)。`app/auth/security.py` でargon2によるパスワード
+ハッシュ化・検証を行い、`app/routes/auth.py` が `POST /api/register` / `POST /api/login` /
+`POST /api/logout` / `GET /api/me` を提供する。エンドポイント契約・Cookie属性は
+`docs/design.md` §7・§8を参照。保護対象のエンドポイントは `@login_required` を付与し、
+所有者確認は `current_user.id` をクエリ条件に含める(憲章 原則III、`app/routes/todos.py`が例)。
+
+## テストの実行方法
+
+`005-api-tests`で整備。`dev` コンテナ内、`apps/api` ディレクトリで:
+
+```bash
+python -m pytest
 ```
 
-## マイグレーション・認証について
+- テストは`app.test_client()`経由でFlaskアプリを直接呼ぶ(`api`コンテナへの起動やcurlは不要)。
+- 各テストはSAVEPOINTベースのトランザクションで囲まれ、テスト後に必ずロールバックされるため、
+  既存の開発用DB(`db`サービス)のデータを汚染しない。
+- `Flask-Limiter`のインメモリストレージは各テスト前にリセットされる(テスト間でログイン試行回数が
+  引き継がれない)。
+- 実装の詳細は `specs/005-api-tests/` (spec.md / research.md / tasks.md) を参照。
 
-Alembic(マイグレーション)・Flask-Login(認証)はまだ入れていない。必要になった時点で
-`requirements.txt` に追加し、`docs/design.md` §7・§8 の契約(エンドポイント・Cookie属性)に
-沿って実装する。
+## openapi.jsonの生成方法
+
+`006-openapi-generation`で整備。`dev` コンテナ内、`apps/api` ディレクトリで:
+
+```bash
+python generate_openapi.py
+```
+
+- リポジトリルート直下の `openapi.json` が生成・更新される(`web`側の型生成はこれを起点にする。憲章 原則V)。
+- `create_app()`のルーティング情報と各Viewのdocstring(YAML)、既存のmarshmallow Schema
+  (`RegisterSchema`/`LoginSchema`/`UserSchema`/`TodoSchema`)から生成する。DB接続は不要。
+- 対象は実装済みエンドポイントのみ。エンドポイントを追加・変更した場合は、対応するView関数の
+  docstringと`generate_openapi.py`の`view_functions`一覧を更新してから再実行する。
+- `openapi.json`は生成物である。手動編集は次回の再生成で失われる(CONTRIBUTING.md §4)。
+- 実装の詳細は `specs/006-openapi-generation/` (spec.md / research.md / tasks.md) を参照。

@@ -5,10 +5,12 @@ from datetime import timedelta
 class Config:
     SECRET_KEY = os.environ["SECRET_KEY"]
 
-    # DB へ実際に接続する処理(SQLAlchemy 等)はまだ入れていない。
-    # 値はここから読める状態にしてあるので、ライブラリを requirements.txt に
-    # 追加した後にそのまま使える(接続方法は README.md 参照)。
+    # feature/dragon-db-test にあった SQLite フォールバックと DevelopmentConfig/
+    # ProductionConfig の分岐は採用していない。DATABASE_URL(Postgres)を唯一の
+    # 接続元にする(docs/design.md §9。ローカル用の値を別経路で持つと二重管理になる)。
     DATABASE_URL = os.environ.get("DATABASE_URL")
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
 
     # Cookie 属性は憲章 原則IV の必須値(docs/design.md §8)
     SESSION_COOKIE_HTTPONLY = True

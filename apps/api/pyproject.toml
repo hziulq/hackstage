@@ -1,0 +1,9 @@
+[tool.ruff]
+# CI(007-ci-setup)。既定ルールセットで開始する(憲章「CI」節: 経験の浅いメンバーが
+# CIに阻まれないことを優先し、厳しいカスタムルールは追加しない)。
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+# RUF012: Flaskのconfig.pyはクラス属性に辞書を持つ慣用パターン(SQLALCHEMY_ENGINE_OPTIONS等)。
+# サブクラスでの書き換えは想定しておらず実害が無いため無視する。
+ignore = ["RUF012"]

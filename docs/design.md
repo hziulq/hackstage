@@ -193,10 +193,68 @@ const res = await fetch(`${process.env.API_INTERNAL_URL}/api/me`, {
 
 | メソッド | パス | 用途 |
 |---|---|---|
+| POST | `/api/register` | オープン登録。メール重複は 400 |
 | POST | `/api/login` | 認証してセッション Cookie を発行 |
 | POST | `/api/logout` | セッション破棄 |
 | GET | `/api/me` | 現在のユーザー情報。未ログインは 401 |
 | GET | `/api/health` | ヘルスチェック（認証不要） |
+
+### 画面別エンドポイント（検討中）
+
+フロント 4 画面（`002-web-four-screens` ブランチ、board / goals / timeline / mypage）の実装から
+必要な API を画面ごとに洗い出したもの。所有者確認はクエリ条件に含める（`todos.py` と同じパターン）。
+
+**Board（掲示板・匿名Q&A）** → `Post`（`category=anonymous_qa`） / `PostComment`
+
+| メソッド | パス | 用途 |
+|---|---|---|
+| GET | `/api/posts?category=anonymous_qa&tag=...` | 一覧 |
+| POST | `/api/posts` | 新規質問 |
+| POST | `/api/posts/<post_id>/comments` | 回答追加 |
+
+**Goals（目標＆逆算ToDo）** → `Goal` / `GoalMilestone`
+
+| メソッド | パス | 用途 |
+|---|---|---|
+| GET | `/api/goals?user_id=...` | 一覧 |
+| POST | `/api/goals` | 新規作成（マイルストーン自動生成込み） |
+| PATCH | `/api/goals/<goal_id>/milestones/<milestone_id>` | 完了トグル |
+| DELETE | `/api/goals/<goal_id>` | 削除 |
+
+**Timeline（タイムライン/カレンダー）** → `Event` / `Post` / `Reaction`
+
+| メソッド | パス | 用途 |
+|---|---|---|
+| GET | `/api/events?calendar_id=...` | 予定一覧 |
+| POST | `/api/events` | 予定作成（参加者本人のみ、`011-events-calendar-sharing`） |
+| GET | `/api/posts?category=...&scope=group\|personal` | 投稿一覧 |
+| POST | `/api/posts` | 投稿作成 |
+| GET | `/api/posts/<post_id>/comments` | コメント一覧（`010-secure-social-api`） |
+| POST | `/api/posts/<post_id>/comments` | コメント追加 |
+| GET | `/api/reactions?target_type=&target_id=` | リアクション一覧（`010-secure-social-api`） |
+| POST | `/api/reactions` | リアクション追加 |
+| DELETE | `/api/reactions/<id>` | リアクション削除 |
+
+**Mypage（マイページ/グループ管理）** → `Calendar` / `CalendarMember` / `PointEvent` / `Post`（`category=prefecture_intern_info`）
+
+| メソッド | パス | 用途 |
+|---|---|---|
+| GET | `/api/calendars/mine` | 自分の個人カレンダー（無ければ作成、`010-secure-social-api`） |
+| POST | `/api/calendars` | グループカレンダー作成・招待コード発行（`011-events-calendar-sharing`） |
+| POST | `/api/calendars/join` | 招待コードでグループに参加（`011-events-calendar-sharing`） |
+| GET | `/api/calendars/<id>` | グループ名・招待コード |
+| GET | `/api/calendars/<id>/members?sort=score` | ランキング（`point_events` 集計） |
+| GET | `/api/posts?category=prefecture_intern_info&prefecture_id=...` | 地域別インターン情報 |
+
+上記に合わせて、以下のとおりモデルのスキーマを変更した（初期マイグレーション `c5e54400a348` を書き換え。まだ未デプロイのため1リビジョンにまとめている）。
+
+1. **タグ機能** → `Post.tags`（Postgres `ARRAY(String)`）を追加。件数の規模から正規化テーブルは見送った
+2. **`Post.category` に timeline 用の値が無い** → `"timeline"` を追加。group/personal の区別は `Post.calendar_id`（nullable, `Event` と同じパターン）が参照する `Calendar.type` から判定する。timeline 投稿にはタイトルが無いため `Post.title` は nullable 化した
+3. **`Reaction` に種類が無い** → `kind`（`fire` / `thumbs_up` / `muscle` / `party`）列を追加。既存の `UniqueConstraint(user_id, target_type, target_id)` は「1人1投稿1リアクション」のままで変更不要
+4. **`Goal` のフィールド不一致** → `title`/`description`/`status` を廃止し、`company_name` / `stage` に統一。`stage` は選考ステージのUI文言が変わりやすいため DB enum ではなく `String(50)`（API 層で validate）にした
+5. **`GoalMilestone` の表現差** → `order_index`/`status` を廃止し、`offset_days`（並び順もこれで決まる）/ `done: Boolean` に統一
+
+> **未決事項**: ランキング用の集計エンドポイントの設計（`point_events` の集計方法・期間・並び順）はスキーマとは別に未定。実装時に決める。
 
 ---
 
@@ -216,7 +274,7 @@ JWT は採用しない（憲章 原則 IV / 未決事項）。理由: 外部ク�
 | パスワード検証・ハッシュ | **api** | 方式は憲章 原則 IV |
 | セッション発行 / 破棄 | **api** | `POST /api/login` / `POST /api/logout` |
 | **API の認証・認可判定** | **api（必須）** | ここが唯一のセキュリティ境界 |
-| 画面遷移の制御 | **web** | `middleware.ts` |
+| 画面遷移の制御 | **web** | `proxy.ts`(Next.js 16の命名規則変更により`middleware.ts`から改称) |
 | ボタン・メニューの表示制御 | **web** | UX のみ。防御ではない |
 | ログイン画面の UI | **web** | |
 
@@ -369,7 +427,6 @@ DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTG
 | `rootDir` | `apps/web` |
 | `dockerfilePath` | `./Dockerfile` |
 | `dockerContext` | `.` |
-| `dockerTarget` | `prod` |
 | `healthCheckPath` | `/healthz`（Next.js 自身が返す。`/api/*` を使わない） |
 | `buildFilter.paths` | `apps/web/**`, `openapi.json` |
 
@@ -382,7 +439,6 @@ DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTG
 | `rootDir` | `apps/api` |
 | `dockerfilePath` | `./Dockerfile` |
 | `dockerContext` | `.` |
-| `dockerTarget` | `prod` |
 | `envVars` | `PORT: 8000` を明示、`SECRET_KEY` は `sync: false` |
 | `buildFilter.paths` | `apps/api/**` |
 
@@ -403,6 +459,13 @@ Render で選択可能な PostgreSQL バージョンはダッシュボードで�
 - `previews: generation: automatic`（PR ごとに web + api + db を一式複製）
 - `buildFilter` は**必須**。省略すると push ごとに全サービスが再ビルドされる
 - `render.yaml` に `dev` サービスを含めない
+- Render Blueprint にはマルチステージ Dockerfile のビルド対象ステージを指定する
+  フィールド（`dockerTarget` 等）が存在しない（指定すると `field dockerTarget
+  not found in type file.Service` で拒否される）。`--target` を指定しない
+  `docker build` は Dockerfile 中の**最後のステージ**をビルドするため、
+  `apps/web`・`apps/api` の Dockerfile は `prod` ステージを最後に置くことで
+  Render からはターゲット指定なしで正しく `prod` がビルドされる
+  （ステージの順序を変えないこと）
 
 ---
 
@@ -412,7 +475,7 @@ Render で選択可能な PostgreSQL バージョンはダッシュボードで�
 |---|---|---|
 | 構成定義 | `compose.yaml` | `render.yaml` |
 | 開発環境 | `.devcontainer/`（`dev` サービス） | 該当なし |
-| Dockerfile | 同一（`target: dev`） | 同一（`dockerTarget: prod`） |
+| Dockerfile | 同一（`--target dev`） | 同一（ターゲット未指定。最後のステージ`prod`が使われる） |
 | DB | compose の `db` コンテナ | Render マネージド Postgres |
 | 環境変数 | `.env` | ダッシュボード / `envVars` |
 | api への到達 | `http://api:8000` | `http://api:8000`（internal） |

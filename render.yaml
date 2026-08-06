@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: web
+    runtime: docker
+    rootDir: apps/web
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    buildFilter:
+      paths:
+        - apps/web/**
+        - openapi.json
+    envVars:
+      - key: API_INTERNAL_URL
+        value: http://api:8000
+      - key: NODE_ENV
+        value: production
+
+  - type: pserv
+    name: api
+    runtime: docker
+    rootDir: apps/api
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    buildFilter:
+      paths:
+        - apps/api/**
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: FLASK_ENV
+        value: production
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: db
+          property: connectionString
+
+databases:
+  - name: db
+    databaseName: hackstage
+    postgresMajorVersion: "17"
+
+previews:
+  generation: automatic
