@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
+import Skeleton from "@/components/ui/Skeleton";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -85,9 +86,9 @@ export default function RegisterForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-xl bg-[var(--color-brand)] py-2.5 text-sm font-bold text-white disabled:opacity-60"
+        className="flex w-full items-center justify-center rounded-xl bg-[var(--color-brand)] py-2.5 text-sm font-bold text-white disabled:opacity-60"
       >
-        {submitting ? "登録中..." : "新規登録"}
+        {submitting ? <Skeleton tone="onBrand" className="h-4 w-20" /> : "新規登録"}
       </button>
 
       <p className="text-center text-xs text-[var(--color-muted)]">
