@@ -25,6 +25,71 @@ def _create_calendar_with_members(owner_id, member_ids):
 def test_events_requires_login(client):
     resp = client.get("/api/events", query_string={"calendar_id": 1})
     assert resp.status_code == 401
+    resp = client.post(
+        "/api/events",
+        json={
+            "calendar_id": 1,
+            "category": "interview",
+            "title": "無視されるはず",
+            "start_at": "2026-09-01T10:00:00+09:00",
+        },
+    )
+    assert resp.status_code == 401
+
+
+def test_create_event_requires_calendar_membership(client):
+    owner = create_user("create-event-owner@example.com")
+    create_user("create-event-outsider@example.com")
+    calendar = _create_calendar_with_members(owner.id, [owner.id])
+
+    _login(client, "create-event-outsider@example.com")
+    resp = client.post(
+        "/api/events",
+        json={
+            "calendar_id": calendar.id,
+            "category": "interview",
+            "title": "侵入テスト",
+            "start_at": "2026-09-01T10:00:00+09:00",
+        },
+    )
+    assert resp.status_code == 404
+
+
+def test_create_event_uses_current_user_and_respects_is_private(client):
+    owner = create_user("create-event-a@example.com")
+    other = create_user("create-event-b@example.com")
+    calendar = _create_calendar_with_members(owner.id, [owner.id, other.id])
+
+    _login(client, "create-event-a@example.com")
+    public_resp = client.post(
+        "/api/events",
+        json={
+            "calendar_id": calendar.id,
+            "category": "es",
+            "title": "公開の予定",
+            "start_at": "2026-09-01T10:00:00+09:00",
+        },
+    )
+    assert public_resp.status_code == 201
+    assert public_resp.get_json()["user_id"] == owner.id
+
+    private_resp = client.post(
+        "/api/events",
+        json={
+            "calendar_id": calendar.id,
+            "category": "other",
+            "title": "非公開の予定",
+            "start_at": "2026-09-02T10:00:00+09:00",
+            "is_private": True,
+        },
+    )
+    assert private_resp.status_code == 201
+
+    client.post("/api/logout")
+    _login(client, "create-event-b@example.com")
+    list_resp = client.get("/api/events", query_string={"calendar_id": calendar.id})
+    titles = [e["title"] for e in list_resp.get_json()]
+    assert titles == ["公開の予定"]
 
 
 def test_events_requires_calendar_membership(client):

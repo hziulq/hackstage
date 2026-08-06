@@ -11,7 +11,7 @@ from apispec import APISpec
 from apispec.ext.marshmallow import MarshmallowPlugin
 from apispec_webframeworks.flask import FlaskPlugin
 from app import create_app
-from app.schemas.calendar import CalendarSchema
+from app.schemas.calendar import CalendarCreateSchema, CalendarJoinSchema, CalendarSchema
 from app.schemas.event import EventSchema
 from app.schemas.goal import GoalCreateSchema, GoalMilestonePatchSchema, GoalSchema
 from app.schemas.post import PostCommentSchema, PostSchema
@@ -54,6 +54,9 @@ def build_spec():
     spec.components.schema("Event", schema=EventSchema)
     spec.components.schema("Reaction", schema=ReactionSchema)
     spec.components.schema("Calendar", schema=CalendarSchema)
+    # 011-events-calendar-sharing: グループカレンダー作成・招待コード参加を追加。
+    spec.components.schema("CalendarCreate", schema=CalendarCreateSchema)
+    spec.components.schema("CalendarJoin", schema=CalendarJoinSchema)
 
     app = create_app()
 
@@ -80,12 +83,16 @@ def build_spec():
         app.view_functions["goals.update_milestone"],
         app.view_functions["goals.delete_goal"],
         app.view_functions["events.list_events"],
+        app.view_functions["events.create_event"],
         app.view_functions["reactions.list_reactions"],
         app.view_functions["reactions.create_reaction"],
         app.view_functions["reactions.delete_reaction"],
         app.view_functions["calendars.get_my_personal_calendar"],
         app.view_functions["calendars.get_calendar"],
         app.view_functions["calendars.list_calendar_members"],
+        # 011-events-calendar-sharing: グループカレンダー作成・招待コード参加。
+        app.view_functions["calendars.create_group_calendar"],
+        app.view_functions["calendars.join_group_calendar"],
     ]
 
     with app.test_request_context():

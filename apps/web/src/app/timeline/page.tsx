@@ -1,14 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useLocalStorageState } from "@/hooks/useLocalStorageState";
-import { GROUP_INFO, INITIAL_EVENTS, INITIAL_TIMELINE_POSTS } from "@/lib/mock-data";
 import type { CalendarEvent, ReactionKind, TimelinePost } from "@/lib/types";
 import { authClient } from "@/lib/auth";
 import { calendarsClient } from "@/lib/calendars";
 import { eventsClient, type ApiEvent } from "@/lib/events";
 import { postsClient, type ApiPost } from "@/lib/posts";
 import { reactionsClient, type ApiReaction } from "@/lib/reactions";
+import { useGroupCalendarId } from "@/lib/group";
 import { ApiError } from "@/lib/api";
 import ScopeTabs, { type Scope } from "@/components/timeline/ScopeTabs";
 import ViewToggle, { type ViewMode } from "@/components/timeline/ViewToggle";
@@ -16,6 +16,7 @@ import UpcomingStrip from "@/components/timeline/UpcomingStrip";
 import MonthCalendar from "@/components/timeline/MonthCalendar";
 import PostCard from "@/components/timeline/PostCard";
 import NewPostBox from "@/components/timeline/NewPostBox";
+import NewEventForm from "@/components/timeline/NewEventForm";
 
 const KIND_TO_API: Record<ReactionKind, ApiReaction["kind"]> = {
   fire: "fire",
@@ -30,11 +31,11 @@ const KIND_FROM_API: Record<ApiReaction["kind"], ReactionKind> = {
   party: "party",
 };
 
-function toCalendarEvent(e: ApiEvent): CalendarEvent {
+function toCalendarEvent(e: ApiEvent, scope: Scope): CalendarEvent {
   const start = new Date(e.start_at);
   return {
     id: String(e.id),
-    scope: "personal",
+    scope,
     title: e.title,
     date: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(
       start.getDate()
@@ -57,12 +58,18 @@ function summarizeReactions(reactions: ApiReaction[], meId: number | null) {
   return { counts, myReaction };
 }
 
-function toTimelinePost(p: ApiPost, reactions: ApiReaction[], meId: number | null): TimelinePost {
+function toTimelinePost(
+  p: ApiPost,
+  reactions: ApiReaction[],
+  meId: number | null,
+  scope: Scope,
+  authorName: string
+): TimelinePost {
   const { counts, myReaction } = summarizeReactions(reactions, meId);
   return {
     id: String(p.id),
-    scope: "personal",
-    author: "自分",
+    scope,
+    author: authorName,
     content: p.body,
     createdAt: p.created_at ?? new Date().toISOString(),
     reactions: counts,
@@ -70,24 +77,40 @@ function toTimelinePost(p: ApiPost, reactions: ApiReaction[], meId: number | nul
   };
 }
 
+interface CalendarFeed {
+  events: CalendarEvent[];
+  posts: TimelinePost[];
+}
+
+const EMPTY_FEED: CalendarFeed = { events: [], posts: [] };
+
 export default function TimelinePage() {
   const [scope, setScope] = useState<Scope>("group");
   const [view, setView] = useState<ViewMode>("timeline");
-
-  // group scope: これまでどおりモックデータ(ローカルストレージ)。
-  const [groupEvents] = useLocalStorageState<CalendarEvent[]>("hackstage:events", INITIAL_EVENTS);
-  const [groupPosts, setGroupPosts] = useLocalStorageState<TimelinePost[]>(
-    "hackstage:posts",
-    INITIAL_TIMELINE_POSTS
-  );
-
-  // personal scope: 個人カレンダー(calendars.mine)経由の実API。
-  const [personalCalendarId, setPersonalCalendarId] = useState<number | null>(null);
-  const [personalEvents, setPersonalEvents] = useState<CalendarEvent[]>([]);
-  const [personalPosts, setPersonalPosts] = useState<TimelinePost[]>([]);
-  const [loadingPersonal, setLoadingPersonal] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const meId = useRef<number | null>(null);
+
+  const [groupCalendarId, setGroupCalendarId] = useGroupCalendarId();
+  const [personalCalendarId, setPersonalCalendarId] = useState<number | null>(null);
+
+  const [groupFeed, setGroupFeed] = useState<CalendarFeed>(EMPTY_FEED);
+  const [personalFeed, setPersonalFeed] = useState<CalendarFeed>(EMPTY_FEED);
+  const [loadingGroup, setLoadingGroup] = useState(true);
+  const [loadingPersonal, setLoadingPersonal] = useState(true);
+
+  async function loadFeed(calendarId: number, scopeForFeed: Scope, nameFor: (userId: number) => string) {
+    const [apiEvents, apiPosts] = await Promise.all([
+      eventsClient.list(calendarId),
+      postsClient.list({ category: "timeline", calendarId }),
+    ]);
+    const posts = await Promise.all(
+      apiPosts.map(async (p) => {
+        const reactions = await reactionsClient.list("post", p.id!);
+        return toTimelinePost(p, reactions, meId.current, scopeForFeed, nameFor(p.user_id!));
+      })
+    );
+    return { events: apiEvents.map((e) => toCalendarEvent(e, scopeForFeed)), posts };
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -96,22 +119,15 @@ export default function TimelinePage() {
       setError(null);
       try {
         const me = await authClient.me();
-        const calendar = await calendarsClient.mine();
-        const [apiEvents, apiPosts] = await Promise.all([
-          eventsClient.list(calendar.id!),
-          postsClient.list({ category: "timeline", calendarId: calendar.id! }),
-        ]);
-        const posts = await Promise.all(
-          apiPosts.map(async (p) => {
-            const reactions = await reactionsClient.list("post", p.id!);
-            return toTimelinePost(p, reactions, me.id ?? null);
-          })
-        );
         if (cancelled) return;
         meId.current = me.id ?? null;
+
+        const calendar = await calendarsClient.mine();
+        if (cancelled) return;
         setPersonalCalendarId(calendar.id ?? null);
-        setPersonalEvents(apiEvents.map(toCalendarEvent));
-        setPersonalPosts(posts);
+
+        const feed = await loadFeed(calendar.id!, "personal", () => "自分");
+        if (!cancelled) setPersonalFeed(feed);
       } catch (err) {
         if (!cancelled) setError(err instanceof ApiError ? err.message : "読み込みに失敗しました");
       } finally {
@@ -124,26 +140,53 @@ export default function TimelinePage() {
     };
   }, []);
 
-  const scopedEvents = scope === "group" ? groupEvents.filter((e) => e.scope === "group") : personalEvents;
-  const scopedPosts =
-    scope === "group"
-      ? groupPosts.filter((p) => p.scope === "group").sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      : [...personalPosts].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (groupCalendarId === null) {
+        setGroupFeed(EMPTY_FEED);
+        setLoadingGroup(false);
+        return;
+      }
+      setLoadingGroup(true);
+      try {
+        const members = await calendarsClient.members(groupCalendarId);
+        const nameByUserId = new Map(members.map((m) => [m.user_id, m.display_name]));
+        const nameFor = (userId: number) =>
+          userId === meId.current ? "自分" : nameByUserId.get(userId) ?? "メンバー";
+        const feed = await loadFeed(groupCalendarId, "group", nameFor);
+        if (!cancelled) setGroupFeed(feed);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof ApiError ? err.message : "読み込みに失敗しました");
+          if (err instanceof ApiError && err.status === 404) setGroupCalendarId(null);
+        }
+      } finally {
+        if (!cancelled) setLoadingGroup(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupCalendarId]);
 
-  function handleReactGroup(postId: string, kind: ReactionKind) {
-    setGroupPosts((prev) =>
-      prev.map((p) => {
-        if (p.id !== postId) return p;
-        const already = p.myReaction === kind;
-        const reactions = { ...p.reactions };
-        if (p.myReaction) reactions[p.myReaction] -= 1;
-        if (!already) reactions[kind] += 1;
-        return { ...p, reactions, myReaction: already ? null : kind };
-      })
-    );
+  const activeCalendarId = scope === "group" ? groupCalendarId : personalCalendarId;
+  const activeFeed = scope === "group" ? groupFeed : personalFeed;
+  const loading = scope === "group" ? loadingGroup : loadingPersonal;
+  const scopedEvents = activeFeed.events;
+  const scopedPosts = [...activeFeed.posts].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+  function applyReactionUpdate(postId: string, counts: Record<ReactionKind, number>, myReaction: ReactionKind | null) {
+    const setFeed = scope === "group" ? setGroupFeed : setPersonalFeed;
+    setFeed((prev) => ({
+      ...prev,
+      posts: prev.posts.map((p) => (p.id !== postId ? p : { ...p, reactions: counts, myReaction })),
+    }));
   }
 
-  async function handleReactPersonal(postId: string, kind: ReactionKind) {
+  async function handleReact(postId: string, kind: ReactionKind) {
     try {
       const current = await reactionsClient.list("post", Number(postId));
       const mine = current.find((r) => r.user_id === meId.current);
@@ -154,49 +197,43 @@ export default function TimelinePage() {
       }
       const updated = await reactionsClient.list("post", Number(postId));
       const { counts, myReaction } = summarizeReactions(updated, meId.current);
-      setPersonalPosts((prev) =>
-        prev.map((p) => (p.id !== postId ? p : { ...p, reactions: counts, myReaction }))
-      );
+      applyReactionUpdate(postId, counts, myReaction);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "リアクションに失敗しました");
     }
   }
 
-  function handleReact(postId: string, kind: ReactionKind) {
-    if (scope === "group") handleReactGroup(postId, kind);
-    else handleReactPersonal(postId, kind);
-  }
-
-  function handleNewPostGroup(content: string) {
-    const newPost: TimelinePost = {
-      id: `p-${Date.now()}`,
-      scope: "group",
-      author: "自分",
-      content,
-      createdAt: new Date().toISOString(),
-      reactions: { fire: 0, thumbsUp: 0, muscle: 0, party: 0 },
-      myReaction: null,
-    };
-    setGroupPosts((prev) => [newPost, ...prev]);
-  }
-
-  async function handleNewPostPersonal(content: string) {
-    if (personalCalendarId === null) return;
+  async function handleNewPost(content: string) {
+    if (activeCalendarId === null) return;
     try {
       const created = await postsClient.create({
         category: "timeline",
         body: content,
-        calendarId: personalCalendarId,
+        calendarId: activeCalendarId,
       });
-      setPersonalPosts((prev) => [toTimelinePost(created, [], meId.current), ...prev]);
+      const setFeed = scope === "group" ? setGroupFeed : setPersonalFeed;
+      const post = toTimelinePost(created, [], meId.current, scope, "自分");
+      setFeed((prev) => ({ ...prev, posts: [post, ...prev.posts] }));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "投稿に失敗しました");
     }
   }
 
-  function handleNewPost(content: string) {
-    if (scope === "group") handleNewPostGroup(content);
-    else handleNewPostPersonal(content);
+  async function handleNewEvent(input: { title: string; date: string; time: string; category: string; isPrivate: boolean }) {
+    if (activeCalendarId === null) return;
+    try {
+      const created = await eventsClient.create({
+        calendarId: activeCalendarId,
+        category: input.category as ApiEvent["category"],
+        title: input.title,
+        startAt: `${input.date}T${input.time}:00`,
+        isPrivate: input.isPrivate,
+      });
+      const setFeed = scope === "group" ? setGroupFeed : setPersonalFeed;
+      setFeed((prev) => ({ ...prev, events: [...prev.events, toCalendarEvent(created, scope)] }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "予定の作成に失敗しました");
+    }
   }
 
   return (
@@ -210,27 +247,43 @@ export default function TimelinePage() {
 
       {error && <p className="text-xs text-red-500">{error}</p>}
 
-      <ScopeTabs scope={scope} onChange={setScope} groupName={GROUP_INFO.name} />
-      <UpcomingStrip events={scopedEvents} />
-      <ViewToggle mode={view} onChange={setView} />
+      <ScopeTabs scope={scope} onChange={setScope} groupName="グループ" />
 
-      {view === "calendar" ? (
-        <MonthCalendar events={scopedEvents} />
+      {scope === "group" && groupCalendarId === null ? (
+        <p className="card px-4 py-6 text-center text-sm text-[var(--color-muted)]">
+          まだグループに参加していません。
+          <Link href="/mypage" className="ml-1 font-semibold text-[var(--color-brand)]">
+            マイページ
+          </Link>
+          でグループを作成・参加してください。
+        </p>
       ) : (
-        <div className="space-y-3">
-          <NewPostBox onSubmit={handleNewPost} />
-          {scope === "personal" && loadingPersonal ? (
-            <p className="py-8 text-center text-sm text-[var(--color-muted)]">読み込み中...</p>
-          ) : scopedPosts.length === 0 ? (
-            <p className="py-8 text-center text-sm text-[var(--color-muted)]">
-              まだ投稿がありません
-            </p>
+        <>
+          <UpcomingStrip events={scopedEvents} />
+          <ViewToggle mode={view} onChange={setView} />
+
+          {view === "calendar" ? (
+            <div className="space-y-3">
+              <NewEventForm onCreate={handleNewEvent} />
+              <MonthCalendar events={scopedEvents} />
+            </div>
           ) : (
-            scopedPosts.map((post) => (
-              <PostCard key={post.id} post={post} onReact={handleReact} />
-            ))
+            <div className="space-y-3">
+              <NewPostBox onSubmit={handleNewPost} />
+              {loading ? (
+                <p className="py-8 text-center text-sm text-[var(--color-muted)]">読み込み中...</p>
+              ) : scopedPosts.length === 0 ? (
+                <p className="py-8 text-center text-sm text-[var(--color-muted)]">
+                  まだ投稿がありません
+                </p>
+              ) : (
+                scopedPosts.map((post) => (
+                  <PostCard key={post.id} post={post} onReact={handleReact} />
+                ))
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

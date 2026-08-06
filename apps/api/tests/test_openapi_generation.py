@@ -23,6 +23,9 @@ EXPECTED_PATHS = {
     "/api/calendars/mine",
     "/api/calendars/{calendar_id}",
     "/api/calendars/{calendar_id}/members",
+    # 011-events-calendar-sharing: グループカレンダー作成・招待コード参加。
+    "/api/calendars",
+    "/api/calendars/join",
 }
 
 

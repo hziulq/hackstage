@@ -226,8 +226,12 @@ const res = await fetch(`${process.env.API_INTERNAL_URL}/api/me`, {
 | メソッド | パス | 用途 |
 |---|---|---|
 | GET | `/api/events?calendar_id=...` | 予定一覧 |
+| POST | `/api/events` | 予定作成（参加者本人のみ、`011-events-calendar-sharing`） |
 | GET | `/api/posts?category=...&scope=group\|personal` | 投稿一覧 |
 | POST | `/api/posts` | 投稿作成 |
+| GET | `/api/posts/<post_id>/comments` | コメント一覧（`010-secure-social-api`） |
+| POST | `/api/posts/<post_id>/comments` | コメント追加 |
+| GET | `/api/reactions?target_type=&target_id=` | リアクション一覧（`010-secure-social-api`） |
 | POST | `/api/reactions` | リアクション追加 |
 | DELETE | `/api/reactions/<id>` | リアクション削除 |
 
@@ -235,6 +239,9 @@ const res = await fetch(`${process.env.API_INTERNAL_URL}/api/me`, {
 
 | メソッド | パス | 用途 |
 |---|---|---|
+| GET | `/api/calendars/mine` | 自分の個人カレンダー（無ければ作成、`010-secure-social-api`） |
+| POST | `/api/calendars` | グループカレンダー作成・招待コード発行（`011-events-calendar-sharing`） |
+| POST | `/api/calendars/join` | 招待コードでグループに参加（`011-events-calendar-sharing`） |
 | GET | `/api/calendars/<id>` | グループ名・招待コード |
 | GET | `/api/calendars/<id>/members?sort=score` | ランキング（`point_events` 集計） |
 | GET | `/api/posts?category=prefecture_intern_info&prefecture_id=...` | 地域別インターン情報 |

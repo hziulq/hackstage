@@ -1,9 +1,11 @@
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
+from marshmallow import ValidationError
 from sqlalchemy import or_
 
+from ..extensions import db
 from ..models.event import Event
-from ..schemas.event import events_schema
+from ..schemas.event import event_schema, events_schema
 from .utils import error_response, is_calendar_member
 
 events_bp = Blueprint("events", __name__, url_prefix="/api")
@@ -52,3 +54,45 @@ def list_events():
         .all()
     )
     return jsonify(events_schema.dump(events)), 200
+
+
+@events_bp.post("/events")
+@login_required
+def create_event():
+    """
+    ---
+    post:
+      summary: 予定を作成する。user_idはクライアントから指定できない
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: EventSchema
+      responses:
+        201:
+          description: 作成成功
+          content:
+            application/json:
+              schema: EventSchema
+        400:
+          description: 入力エラー
+        401:
+          description: 未ログイン
+        404:
+          description: 参加していないカレンダー
+    """
+    payload = request.get_json(silent=True) or {}
+    try:
+        data = event_schema.load(payload)
+    except ValidationError as err:
+        return error_response("validation_error", "入力内容を確認してください。", err.messages)
+
+    if not is_calendar_member(data["calendar_id"], current_user.id):
+        return error_response("not_found", "カレンダーが見つかりません。", status=404)
+
+    event = Event(user_id=current_user.id, **data)
+    db.session.add(event)
+    db.session.commit()
+    return jsonify(event_schema.dump(event)), 201

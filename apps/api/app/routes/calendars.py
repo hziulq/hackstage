@@ -1,15 +1,133 @@
+import secrets
+
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
+from marshmallow import ValidationError
 from sqlalchemy import func
 
 from ..extensions import db
 from ..models.calendar import Calendar, CalendarMember
 from ..models.score import PointEvent
 from ..models.user import User
-from ..schemas.calendar import calendar_schema
+from ..schemas.calendar import calendar_create_schema, calendar_join_schema, calendar_schema
 from .utils import error_response, is_calendar_member
 
 calendars_bp = Blueprint("calendars", __name__, url_prefix="/api")
+
+
+def _generate_invite_code():
+    """推測されにくいランダムな招待コードを発行する(research.md §1)。
+
+    Calendar.invite_code は UNIQUE 制約付きのため、衝突時のみ再試行する。
+    """
+    for _ in range(10):
+        code = secrets.token_urlsafe(6)
+        if Calendar.query.filter_by(invite_code=code).first() is None:
+            return code
+    raise RuntimeError("招待コードの生成に失敗しました。")
+
+
+@calendars_bp.post("/calendars")
+@login_required
+def create_group_calendar():
+    """
+    ---
+    post:
+      summary: グループカレンダーを作成する。作成者は自動的にownerとして参加する
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: CalendarCreateSchema
+      responses:
+        201:
+          description: 作成成功(招待コードを含む)
+          content:
+            application/json:
+              schema: CalendarSchema
+        400:
+          description: 入力エラー
+        401:
+          description: 未ログイン
+    """
+    payload = request.get_json(silent=True) or {}
+    try:
+        data = calendar_create_schema.load(payload)
+    except ValidationError as err:
+        return error_response("validation_error", "入力内容を確認してください。", err.messages)
+
+    calendar = Calendar(
+        name=data["name"],
+        type="group",
+        owner_id=current_user.id,
+        invite_code=_generate_invite_code(),
+    )
+    db.session.add(calendar)
+    db.session.flush()  # CalendarMember作成前にcalendar.idを確定させる
+    db.session.add(
+        CalendarMember(calendar_id=calendar.id, user_id=current_user.id, role="owner")
+    )
+    db.session.commit()
+
+    return jsonify(calendar_schema.dump(calendar)), 201
+
+
+@calendars_bp.post("/calendars/join")
+@login_required
+def join_group_calendar():
+    """
+    ---
+    post:
+      summary: 招待コードでグループカレンダーに参加する。参加済みなら200(冪等)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: CalendarJoinSchema
+      responses:
+        201:
+          description: 新規に参加した
+          content:
+            application/json:
+              schema: CalendarSchema
+        200:
+          description: 既に参加済み
+          content:
+            application/json:
+              schema: CalendarSchema
+        400:
+          description: 入力エラー
+        401:
+          description: 未ログイン
+        404:
+          description: 招待コードが見つからない
+    """
+    payload = request.get_json(silent=True) or {}
+    try:
+        data = calendar_join_schema.load(payload)
+    except ValidationError as err:
+        return error_response("validation_error", "入力内容を確認してください。", err.messages)
+
+    calendar = Calendar.query.filter_by(invite_code=data["invite_code"], type="group").first()
+    if calendar is None:
+        return error_response("not_found", "招待コードが見つかりません。", status=404)
+
+    existing = CalendarMember.query.filter_by(
+        calendar_id=calendar.id, user_id=current_user.id
+    ).first()
+    if existing is not None:
+        return jsonify(calendar_schema.dump(calendar)), 200
+
+    db.session.add(
+        CalendarMember(calendar_id=calendar.id, user_id=current_user.id, role="member")
+    )
+    db.session.commit()
+
+    return jsonify(calendar_schema.dump(calendar)), 201
 
 
 @calendars_bp.get("/calendars/mine")
