@@ -52,3 +52,28 @@ def test_calendar_member_can_view(client):
     assert resp.status_code == 200
     user_ids = {m["user_id"] for m in resp.get_json()}
     assert user_ids == {owner.id, member.id}
+
+
+def test_mine_requires_login(client):
+    resp = client.get("/api/calendars/mine")
+    assert resp.status_code == 401
+
+
+def test_mine_creates_personal_calendar_once(client):
+    owner = create_user("mine-owner@example.com")
+    _login(client, "mine-owner@example.com")
+
+    first = client.get("/api/calendars/mine")
+    assert first.status_code == 200
+    body = first.get_json()
+    assert body["type"] == "personal"
+    assert body["owner_id"] == owner.id
+
+    member = CalendarMember.query.filter_by(calendar_id=body["id"], user_id=owner.id).first()
+    assert member is not None
+
+    second = client.get("/api/calendars/mine")
+    assert second.status_code == 200
+    assert second.get_json()["id"] == body["id"]  # 2回目は新規作成しない
+
+    assert Calendar.query.filter_by(owner_id=owner.id, type="personal").count() == 1

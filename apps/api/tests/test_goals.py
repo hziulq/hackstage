@@ -61,6 +61,33 @@ def test_goals_are_isolated_per_owner(client):
     assert delete_resp.status_code == 404
 
 
+def test_goal_response_includes_nested_milestones(client):
+    create_user("goal-milestones@example.com")
+    _login(client, "goal-milestones@example.com")
+
+    create_resp = client.post(
+        "/api/goals",
+        json={
+            "company_name": "C社",
+            "stage": "ES",
+            "target_date": "2026-12-01",
+            "milestones": [
+                {"title": "ES提出", "offset_days": -30},
+                {"title": "一次面接", "offset_days": -14},
+            ],
+        },
+    )
+    assert create_resp.status_code == 201
+    goal = create_resp.get_json()
+    assert [m["title"] for m in goal["milestones"]] == ["ES提出", "一次面接"]
+    assert all(m["done"] is False for m in goal["milestones"])
+
+    list_resp = client.get("/api/goals")
+    assert list_resp.status_code == 200
+    listed_goal = list_resp.get_json()[0]
+    assert len(listed_goal["milestones"]) == 2
+
+
 def test_milestone_toggle_requires_ownership(client):
     create_user("milestone-owner@example.com")
     create_user("milestone-other@example.com")

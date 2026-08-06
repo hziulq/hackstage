@@ -21,6 +21,46 @@ def test_reactions_requires_login(client):
         "/api/reactions", json={"target_type": "post", "target_id": 1, "kind": "fire"}
     )
     assert resp.status_code == 401
+    resp = client.get("/api/reactions", query_string={"target_type": "post", "target_id": 1})
+    assert resp.status_code == 401
+
+
+def test_list_reactions_for_target(client):
+    author = create_user("reaction-list-author@example.com")
+    reactor_a = create_user("reaction-list-a@example.com")
+    reactor_b = create_user("reaction-list-b@example.com")
+    post = _create_post(author.id)
+    other_post = _create_post(author.id)
+
+    _login(client, "reaction-list-a@example.com")
+    client.post(
+        "/api/reactions",
+        json={"target_type": "post", "target_id": post.id, "kind": "fire"},
+    )
+    client.post("/api/logout")
+
+    _login(client, "reaction-list-b@example.com")
+    client.post(
+        "/api/reactions",
+        json={"target_type": "post", "target_id": post.id, "kind": "fire"},
+    )
+    # 別対象へのリアクションは一覧に含まれないことも確認する。
+    client.post(
+        "/api/reactions",
+        json={"target_type": "post", "target_id": other_post.id, "kind": "party"},
+    )
+
+    resp = client.get(
+        "/api/reactions", query_string={"target_type": "post", "target_id": post.id}
+    )
+    assert resp.status_code == 200
+    user_ids = {r["user_id"] for r in resp.get_json()}
+    assert user_ids == {reactor_a.id, reactor_b.id}
+
+    bad_resp = client.get(
+        "/api/reactions", query_string={"target_type": "invalid", "target_id": post.id}
+    )
+    assert bad_resp.status_code == 400
 
 
 def test_reaction_ignores_client_user_id_and_ownership_enforced(client):

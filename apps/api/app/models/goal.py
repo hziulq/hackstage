@@ -12,6 +12,11 @@ class Goal(db.Model, TimestampMixin):
     # 変わることが想定されるため、DB enumではなくAPI層(marshmallow)でvalidateする文字列にする。
     stage = db.Column(db.String(50), nullable=False)
     target_date = db.Column(db.Date, nullable=False)
+    # GoalSchemaでのネスト出力用(GET /api/goalsで各Goalのマイルストーンを一緒に返す)。
+    # offset_days昇順(負の値ほど目標日から遠い)=due_date昇順と同じ並びになる。
+    milestones = db.relationship(
+        "GoalMilestone", order_by="GoalMilestone.offset_days.asc()"
+    )
 
 
 class GoalMilestone(db.Model, TimestampMixin):

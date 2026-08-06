@@ -388,6 +388,35 @@
       }
     },
     "/api/posts/{post_id}/comments": {
+      "get": {
+        "summary": "投稿のコメント一覧を取得する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PostComment"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未ログイン"
+          },
+          "404": {
+            "description": "対象の投稿が存在しない"
+          }
+        }
+      },
       "post": {
         "summary": "投稿にコメントを追加する。user_idはクライアントから指定できない",
         "security": [
@@ -586,6 +615,35 @@
       }
     },
     "/api/reactions": {
+      "get": {
+        "summary": "対象(投稿/予定)のリアクション一覧を取得する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Reaction"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "target_type・target_idが不正"
+          },
+          "401": {
+            "description": "未ログイン"
+          }
+        }
+      },
       "post": {
         "summary": "リアクションを追加する。user_idはクライアントから指定できない",
         "security": [
@@ -653,6 +711,31 @@
           },
           "404": {
             "description": "存在しない、または他人のリアクション"
+          }
+        }
+      }
+    },
+    "/api/calendars/mine": {
+      "get": {
+        "summary": "自分の個人カレンダーを取得する。無ければ作成する",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "正常",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Calendar"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未ログイン"
           }
         }
       }
@@ -907,6 +990,42 @@
         ],
         "additionalProperties": false
       },
+      "GoalMilestone": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "goal_id": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "title": {
+            "type": "string",
+            "readOnly": true
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "readOnly": true
+          },
+          "offset_days": {
+            "type": "integer",
+            "readOnly": true
+          },
+          "done": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "event_id": {
+            "type": "integer",
+            "readOnly": true,
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "Goal": {
         "type": "object",
         "properties": {
@@ -931,6 +1050,13 @@
           "target_date": {
             "type": "string",
             "format": "date"
+          },
+          "milestones": {
+            "readOnly": true,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoalMilestone"
+            }
           },
           "created_at": {
             "type": "string",
@@ -993,6 +1119,12 @@
             "type": "string",
             "format": "date"
           },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GoalMilestoneInput"
+            }
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -1002,12 +1134,6 @@
             "type": "string",
             "format": "date-time",
             "readOnly": true
-          },
-          "milestones": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GoalMilestoneInput"
-            }
           }
         },
         "required": [
@@ -1015,42 +1141,6 @@
           "stage",
           "target_date"
         ],
-        "additionalProperties": false
-      },
-      "GoalMilestone": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "integer",
-            "readOnly": true
-          },
-          "goal_id": {
-            "type": "integer",
-            "readOnly": true
-          },
-          "title": {
-            "type": "string",
-            "readOnly": true
-          },
-          "due_date": {
-            "type": "string",
-            "format": "date",
-            "readOnly": true
-          },
-          "offset_days": {
-            "type": "integer",
-            "readOnly": true
-          },
-          "done": {
-            "type": "boolean",
-            "readOnly": true
-          },
-          "event_id": {
-            "type": "integer",
-            "readOnly": true,
-            "nullable": true
-          }
-        },
         "additionalProperties": false
       },
       "GoalMilestonePatch": {

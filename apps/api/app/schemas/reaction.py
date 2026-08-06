@@ -14,3 +14,4 @@ class ReactionSchema(Schema):
  
  
 reaction_schema = ReactionSchema()
+reactions_schema = ReactionSchema(many=True)

@@ -40,3 +40,4 @@ class PostCommentSchema(Schema):
  
  
 post_comment_schema = PostCommentSchema()
+post_comments_schema = PostCommentSchema(many=True)

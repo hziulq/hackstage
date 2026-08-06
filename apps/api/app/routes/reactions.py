@@ -6,12 +6,52 @@ from ..extensions import db
 from ..models.board import Post
 from ..models.event import Event
 from ..models.reaction import Reaction
-from ..schemas.reaction import reaction_schema
+from ..schemas.reaction import reaction_schema, reactions_schema
 from .utils import error_response
 
 reactions_bp = Blueprint("reactions", __name__, url_prefix="/api")
 
 _TARGET_MODELS = {"event": Event, "post": Post}
+
+
+@reactions_bp.get("/reactions")
+@login_required
+def list_reactions():
+    """
+    GET /api/reactions?target_type=post&target_id=1
+
+    投稿・予定に付いているリアクション一覧(集計・自分のリアクション判定はフロント側で行う)。
+    ---
+    get:
+      summary: 対象(投稿/予定)のリアクション一覧を取得する
+      security:
+        - cookieAuth: []
+      responses:
+        200:
+          description: 正常
+          content:
+            application/json:
+              schema:
+                type: array
+                items: ReactionSchema
+        400:
+          description: target_type・target_idが不正
+        401:
+          description: 未ログイン
+    """
+    target_type = request.args.get("target_type")
+    target_id = request.args.get("target_id", type=int)
+    if target_type not in _TARGET_MODELS or target_id is None:
+        return error_response(
+            "validation_error",
+            "target_type・target_idを指定してください。",
+            {"target_type": ["'event' または 'post' を指定してください。"]},
+        )
+
+    reactions = Reaction.query.filter(
+        Reaction.target_type == target_type, Reaction.target_id == target_id
+    ).all()
+    return jsonify(reactions_schema.dump(reactions)), 200
 
 
 @reactions_bp.post("/reactions")

@@ -579,7 +579,41 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** 投稿のコメント一覧を取得する */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 正常 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PostComment"][];
+                    };
+                };
+                /** @description 未ログイン */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description 対象の投稿が存在しない */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         put?: never;
         /** 投稿にコメントを追加する。user_idはクライアントから指定できない */
         post: {
@@ -880,7 +914,41 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** 対象(投稿/予定)のリアクション一覧を取得する */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 正常 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Reaction"][];
+                    };
+                };
+                /** @description target_type・target_idが不正 */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description 未ログイン */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         put?: never;
         /** リアクションを追加する。user_idはクライアントから指定できない */
         post: {
@@ -986,6 +1054,49 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/calendars/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 自分の個人カレンダーを取得する。無ければ作成する */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description 正常 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Calendar"];
+                    };
+                };
+                /** @description 未ログイン */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1145,6 +1256,16 @@ export interface components {
             /** Format: date-time */
             readonly updated_at?: string;
         };
+        GoalMilestone: {
+            readonly id?: number;
+            readonly goal_id?: number;
+            readonly title?: string;
+            /** Format: date */
+            readonly due_date?: string;
+            readonly offset_days?: number;
+            readonly done?: boolean;
+            readonly event_id?: number | null;
+        };
         Goal: {
             readonly id?: number;
             readonly user_id?: number;
@@ -1152,6 +1273,7 @@ export interface components {
             stage: string;
             /** Format: date */
             target_date: string;
+            readonly milestones?: components["schemas"]["GoalMilestone"][];
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
@@ -1168,21 +1290,11 @@ export interface components {
             stage: string;
             /** Format: date */
             target_date: string;
+            milestones?: components["schemas"]["GoalMilestoneInput"][];
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
             readonly updated_at?: string;
-            milestones?: components["schemas"]["GoalMilestoneInput"][];
-        };
-        GoalMilestone: {
-            readonly id?: number;
-            readonly goal_id?: number;
-            readonly title?: string;
-            /** Format: date */
-            readonly due_date?: string;
-            readonly offset_days?: number;
-            readonly done?: boolean;
-            readonly event_id?: number | null;
         };
         GoalMilestonePatch: {
             done: boolean;

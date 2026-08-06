@@ -12,6 +12,44 @@ from .utils import error_response, is_calendar_member
 calendars_bp = Blueprint("calendars", __name__, url_prefix="/api")
 
 
+@calendars_bp.get("/calendars/mine")
+@login_required
+def get_my_personal_calendar():
+    """
+    自分の個人カレンダー(type=personal)を取得する。存在しない場合はここで作成する
+    (get-or-create)。個人カレンダーの作成・参加を行う専用エンドポイントが無いため、
+    timelineのpersonal scopeが最初にアクセスした時点で暗黙に用意する。
+    ---
+    get:
+      summary: 自分の個人カレンダーを取得する。無ければ作成する
+      security:
+        - cookieAuth: []
+      responses:
+        200:
+          description: 正常
+          content:
+            application/json:
+              schema: CalendarSchema
+        401:
+          description: 未ログイン
+    """
+    calendar = Calendar.query.filter_by(owner_id=current_user.id, type="personal").first()
+    if calendar is None:
+        calendar = Calendar(
+            name=f"{current_user.display_name}の個人カレンダー",
+            type="personal",
+            owner_id=current_user.id,
+        )
+        db.session.add(calendar)
+        db.session.flush()  # CalendarMember作成前にcalendar.idを確定させる
+        db.session.add(
+            CalendarMember(calendar_id=calendar.id, user_id=current_user.id, role="owner")
+        )
+        db.session.commit()
+
+    return jsonify(calendar_schema.dump(calendar)), 200
+
+
 @calendars_bp.get("/calendars/<int:calendar_id>")
 @login_required
 def get_calendar(calendar_id):

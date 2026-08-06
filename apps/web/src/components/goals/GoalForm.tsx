@@ -88,7 +88,7 @@ export default function GoalForm({
           type="submit"
           className="flex-1 rounded-lg bg-[var(--color-brand)] py-2 text-sm font-semibold text-white"
         >
-          8つのマイルストーンを生成
+          マイルストーンを生成
         </button>
       </div>
     </form>
