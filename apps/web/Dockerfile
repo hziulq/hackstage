@@ -13,6 +13,10 @@ CMD ["npm", "run", "dev"]
 # ── ビルド(本番用の.next/standaloneを生成) ───────────
 FROM base AS builder
 ENV NODE_ENV=production
+# next.config.js の rewrites() はビルド時に評価され .next/routes-manifest.json に
+# 焼き込まれる(standalone サーバーは実行時に再評価しない)。値はローカル/本番で
+# 同一固定(docs/design.md §5, §9)なのでここに直書きする。
+ENV API_INTERNAL_URL=http://api:8000
 COPY . .
 RUN npm run build
 
